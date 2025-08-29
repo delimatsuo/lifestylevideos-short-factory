@@ -22,6 +22,8 @@ from core.audio_generator import AudioGenerator
 from core.video_sourcing import VideoSourcingManager
 from core.video_assembly import VideoAssemblyManager
 from core.caption_manager import CaptionManager
+from core.metadata_manager import MetadataManager
+from core.youtube_distribution import YouTubeDistributionManager
 from integrations.google_sheets import GoogleSheetsManager
 from utils.logger import setup_logging
 
@@ -40,6 +42,8 @@ class ShortsFactory:
         self.video_sourcing = None
         self.video_assembly = None
         self.caption_manager = None
+        self.metadata_manager = None
+        self.youtube_distribution = None
         self.setup_complete = False
     
     def initialize(self) -> bool:
@@ -138,6 +142,24 @@ class ShortsFactory:
             
             self.logger.info("✅ Caption Manager initialized successfully")
             
+            # Initialize Metadata Manager (NEW - TASK #9!)
+            self.logger.info("📺 Initializing Metadata Manager...")
+            self.metadata_manager = MetadataManager()
+            if not self.metadata_manager.initialize():
+                self.logger.error("❌ Metadata Manager initialization failed")
+                return False
+            
+            self.logger.info("✅ Metadata Manager initialized successfully")
+            
+            # Initialize YouTube Distribution Manager (NEW - TASK #10!)
+            self.logger.info("🚀 Initializing YouTube Distribution Manager...")
+            self.youtube_distribution = YouTubeDistributionManager()
+            if not self.youtube_distribution.initialize():
+                self.logger.error("❌ YouTube Distribution Manager initialization failed")
+                return False
+            
+            self.logger.info("✅ YouTube Distribution Manager initialized successfully")
+            
             # Create working directories
             self.logger.info("📁 Setting up working directories...")
             self._setup_working_directories()
@@ -158,8 +180,11 @@ class ShortsFactory:
             config.working_directory / 'final_videos',
             config.working_directory / 'captions',
             config.working_directory / 'captioned_videos',
+            config.working_directory / 'metadata',
+            config.working_directory / 'credentials',
             config.working_directory / 'background_loops',
-            config.working_directory / 'logs'
+            config.working_directory / 'logs',
+            config.working_directory / 'logs' / 'distribution'
         ]
         
         for directory in directories:
@@ -424,8 +449,59 @@ class ShortsFactory:
             else:
                 self.logger.info("📊 No content ready for caption generation")
             
-            # Phase 5: Distribution (will be implemented in later tasks)
-            self.logger.info("📤 Phase 5: Distribution - TODO")
+            # Phase 5: YouTube Metadata Generation (NEW - TASK #9 IMPLEMENTED!)
+            self.logger.info("📺 Phase 5: YouTube Metadata Generation")
+            
+            # Check for content ready for metadata generation
+            metadata_results = self.metadata_manager.run_metadata_generation_cycle()
+            
+            if metadata_results.get('total_ready', 0) > 0:
+                generated_count = metadata_results.get('successfully_generated', 0)
+                failed_count = metadata_results.get('failed_generation', 0)
+                
+                self.logger.info(f"🎉 Metadata generation results: {generated_count} successful, {failed_count} failed")
+                
+                if generated_count > 0:
+                    self.logger.info("📺 Successfully generated metadata:")
+                    for item in metadata_results.get('generated_items', []):
+                        self.logger.info(f"   ✅ {item.get('title', 'Unknown')} (ID: {item.get('id', 'Unknown')})")
+                
+                if failed_count > 0:
+                    self.logger.warning("⚠️ Failed metadata generations:")
+                    for item in metadata_results.get('failed_items', []):
+                        self.logger.warning(f"   ❌ {item.get('title', 'Unknown')} (ID: {item.get('id', 'Unknown')})")
+            else:
+                self.logger.info("📊 No content ready for metadata generation")
+            
+            # Phase 6: YouTube Distribution (NEW - TASK #10 IMPLEMENTED!)
+            self.logger.info("🚀 Phase 6: YouTube Distribution")
+            
+            # Check for content ready for YouTube upload
+            distribution_results = self.youtube_distribution.run_distribution_cycle()
+            
+            if distribution_results.get('total_ready', 0) > 0:
+                uploaded_count = distribution_results.get('successfully_uploaded', 0)
+                failed_count = distribution_results.get('failed_uploads', 0)
+                
+                self.logger.info(f"🎉 YouTube distribution results: {uploaded_count} successful, {failed_count} failed")
+                
+                if uploaded_count > 0:
+                    self.logger.info("🚀 Successfully uploaded to YouTube:")
+                    for item in distribution_results.get('uploaded_items', []):
+                        self.logger.info(f"   ✅ {item.get('title', 'Unknown')} → {item.get('youtube_url', 'No URL')}")
+                
+                if failed_count > 0:
+                    self.logger.warning("⚠️ Failed YouTube uploads:")
+                    for item in distribution_results.get('failed_items', []):
+                        self.logger.warning(f"   ❌ {item.get('title', 'Unknown')} (ID: {item.get('id', 'Unknown')})")
+                
+                # Log final completion summary
+                if uploaded_count > 0:
+                    self.logger.info("🎊 COMPLETE END-TO-END PIPELINE SUCCESS!")
+                    self.logger.info("📊 Content successfully processed from idea to published YouTube video!")
+                    
+            else:
+                self.logger.info("📊 No content ready for YouTube distribution")
             
             self.logger.info("✅ Daily pipeline execution complete")
             
