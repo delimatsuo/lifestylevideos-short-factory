@@ -1,0 +1,232 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Core Orchestration and Google Sheets Integration",
+        "description": "Establish the foundational Python project structure, including environment setup, API key management, and integration with the Google Sheets API to act as the central dashboard.",
+        "details": "Create a Python 3.x application. Implement secure management of API keys using environment variables. Integrate with Google Sheets API v4 to create, read, and update the dashboard based on the defined schema (ID, Source, Title, Status, etc.). Set up a daily scheduled execution trigger.",
+        "testStrategy": "Verify that the Python script can successfully connect to Google Sheets, read the existing data, and update a 'Status' cell. Confirm that API keys are loaded from environment variables and not hard-coded.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Implement Content Ideation Engine (Gemini & Reddit)",
+        "description": "Develop the automated content ideation module that sources ideas from both the Gemini API and the Reddit API.",
+        "details": "Integrate with the Google Gemini API to generate 10-20 ideas on Career/Self-Help/Management topics. Integrate with the Reddit API to pull trending stories from specified subreddits. The script should populate the Google Sheet with these new ideas, marking their status as 'Pending Approval'.",
+        "testStrategy": "Run the script and confirm that new rows are added to the Google Sheet with content from both Gemini and Reddit sources, and the status is correctly set to 'Pending Approval'.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Build Google Sheets Approval Workflow",
+        "description": "Create the logic that monitors the Google Sheet for status changes and triggers the next stage of the content pipeline.",
+        "details": "The main orchestration script should poll the Google Sheet for rows where the 'Status' has been manually changed from 'Pending Approval' to 'Approved'. This change will act as the trigger for the video creation process for that specific content item.",
+        "testStrategy": "Manually change the status of an idea in the Google Sheet to 'Approved'. Verify that the system correctly identifies this change and updates the item's status to 'In Progress'.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Develop Automated Script Generation Module",
+        "description": "For an approved idea, use the Gemini API to generate a short-form video script of approximately 160 words.",
+        "details": "Create a function that takes an approved 'Title/Concept' from the Google Sheet. Send a prompt to the Gemini API to generate a script optimized for the shorts format. The generated script should be saved back to the 'Script' column in the corresponding row of the Google Sheet.",
+        "testStrategy": "Trigger the workflow for an approved idea. Check the Google Sheet to confirm that the 'Script' column is populated with a text of approximately 160 words.",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Integrate ElevenLabs for Text-to-Speech Narration",
+        "description": "Convert the generated script into a natural-sounding MP3 audio file using the ElevenLabs API.",
+        "details": "Take the script text from the Google Sheet. Call the ElevenLabs API (v1/text-to-speech) to generate an MP3 file. Save the resulting audio file to the '/working_directory/audio/' folder and store its path in the 'Audio_File' column of the Google Sheet.",
+        "testStrategy": "After a script is generated, verify that an MP3 file is created in the correct directory. Play the audio file to ensure the narration quality is acceptable. Check that the file path is updated in the sheet.",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Implement Pexels API for Stock Video Sourcing",
+        "description": "Automatically source and download relevant stock video clips from Pexels based on the content's topic.",
+        "details": "Extract keywords from the content's 'Title/Concept' or 'Script'. Use the Pexels API ('v1/videos/search') to find relevant stock videos. Download a selection of clips to the '/working_directory/video_clips/' directory for use in video assembly.",
+        "testStrategy": "For a given topic, verify that the script successfully downloads multiple relevant video clips from Pexels into the local 'video_clips' folder.",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Create FFmpeg Video Assembly Pipeline",
+        "description": "Combine the generated audio narration and downloaded video clips into a single video file using FFmpeg.",
+        "details": "Develop an FFmpeg command-line script that stitches together video clips from the 'video_clips' folder (or a pre-downloaded loop for Reddit stories). The total video length should match the narration length. The final output must be rendered in a 9:16 aspect ratio (1080x1920).",
+        "testStrategy": "Execute the FFmpeg script with sample audio and video files. Verify that a single MP4 file is created in the correct aspect ratio and that the audio is correctly overlaid.",
+        "priority": "medium",
+        "dependencies": [
+          5,
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize Project Repository and Environment",
+            "description": "Set up the basic project structure, version control (Git), and initial development environment (e.g., virtual environment, basic dependencies).",
+            "dependencies": [],
+            "details": "Create a new Git repository, initialize a Python virtual environment, install basic tools like `pip`, `pytest`, `black`. Add a `.gitignore` file and a `README.md`.",
+            "status": "pending",
+            "testStrategy": "Verify `git status` shows no uncommitted changes, `pip list` shows installed packages, and `python -m venv` created the environment successfully."
+          },
+          {
+            "id": 2,
+            "title": "Design Application Database Schema",
+            "description": "Define the relational database schema required for the application's data storage, including tables, columns, relationships, and data types.",
+            "dependencies": [],
+            "details": "Use an ERD tool or plain text to define tables (e.g., `users`, `products`, `orders`). Specify primary keys, foreign keys, data types (e.g., `VARCHAR`, `INT`, `DATETIME`), and constraints. Document the schema clearly.",
+            "status": "pending",
+            "testStrategy": "Review the schema definition for completeness, normalization, and consistency with application requirements. Validate against common database design principles and potential edge cases."
+          },
+          {
+            "id": 3,
+            "title": "Develop Core API Endpoints for Data Management",
+            "description": "Implement the primary CRUD (Create, Read, Update, Delete) API endpoints for the main application entities, connecting to the designed database.",
+            "dependencies": [],
+            "details": "Use a chosen web framework (e.g., Flask, Django, FastAPI) to create routes for `/users`, `/products`, `/orders`. Implement logic to interact with the database using an ORM or raw SQL. Handle request parsing and response formatting (JSON).",
+            "status": "pending",
+            "testStrategy": "Use an API client (e.g., Postman, curl) or automated tests to send requests to each endpoint (GET, POST, PUT, DELETE) and verify correct responses, HTTP status codes, and data persistence in the database."
+          },
+          {
+            "id": 4,
+            "title": "Implement User Authentication and Authorization",
+            "description": "Develop the necessary components for user registration, login, session management, and role-based access control.",
+            "dependencies": [],
+            "details": "Implement user registration endpoint (`/register`), login endpoint (`/login`), token generation (JWT or session cookies), password hashing (e.g., bcrypt), and middleware for protecting authenticated routes. Define user roles (e.g., `admin`, `user`).",
+            "status": "pending",
+            "testStrategy": "Test user registration, successful login, invalid credentials, token expiration, and access to protected routes with different user roles. Verify secure password storage and proper error handling for unauthorized access."
+          },
+          {
+            "id": 5,
+            "title": "Build Basic Frontend User Interface",
+            "description": "Develop a basic web-based user interface that interacts with the implemented API endpoints to display and manage data.",
+            "dependencies": [],
+            "details": "Use a frontend framework (e.g., React, Vue, Angular) or plain HTML/CSS/JS to create pages for user login/registration, displaying lists of items, and forms for creating/editing items. Integrate with the backend API using `fetch` or Axios.",
+            "status": "pending",
+            "testStrategy": "Manually navigate through the UI, perform CRUD operations, log in/out, and verify that data is correctly displayed and updated, and that authentication works as expected. Use browser developer tools to check API calls and responses."
+          },
+          {
+            "id": 6,
+            "title": "Initialize Project Repository and Basic Structure",
+            "description": "Set up the version control repository, define the initial project directory structure, and configure essential build/dependency management tools.",
+            "dependencies": [],
+            "details": "Create a new Git repository. Establish `src/`, `tests/`, `docs/`, and `config/` directories. Configure `package.json` (Node.js), `pyproject.toml` (Python), or similar for dependency management. Add a comprehensive `.gitignore` file.",
+            "status": "pending",
+            "testStrategy": "Verify repository creation and cloning. Confirm the presence of all specified directories. Run a basic build command (if applicable) to ensure toolchain is functional. Check `.gitignore` by attempting to commit ignored files."
+          },
+          {
+            "id": 7,
+            "title": "Design and Document Core Database Schema",
+            "description": "Define the relational or NoSQL database schema for the application's primary data models, including entities, attributes, relationships, and constraints.",
+            "dependencies": [],
+            "details": "Identify key entities (e.g., Users, Products, Orders). For each entity, define attributes with appropriate data types. Establish relationships (one-to-many, many-to-many) and define primary/foreign keys. Document the schema using an ERD or DDL script.",
+            "status": "pending",
+            "testStrategy": "Review the schema for normalization, data integrity, and scalability. Validate against initial business requirements. Conduct peer review of the ERD/DDL. If possible, create a dummy database instance and apply the schema to check for syntax errors."
+          },
+          {
+            "id": 8,
+            "title": "Implement User Authentication and Authorization Module",
+            "description": "Develop the backend functionalities for user registration, login, session management, and role-based access control.",
+            "dependencies": [],
+            "details": "Implement API endpoints for user signup and sign-in. Use secure password hashing (e.g., bcrypt). Implement JWTs or session cookies for authentication. Define user roles (e.g., 'admin', 'user') and implement middleware for authorization checks on protected routes. Store user data in the database defined in Subtask 2.",
+            "status": "pending",
+            "testStrategy": "Write unit tests for password hashing, token generation/validation. Develop integration tests for signup, login, and logout endpoints. Test access to protected routes with valid and invalid tokens/roles. Conduct basic security checks for common vulnerabilities like SQL injection or XSS in auth flows."
+          },
+          {
+            "id": 9,
+            "title": "Develop Core Business Logic API Endpoints",
+            "description": "Create RESTful API endpoints for the application's primary functionalities, including CRUD operations for key entities.",
+            "dependencies": [],
+            "details": "Define API routes (e.g., `/api/products`, `/api/orders`). Implement controllers/handlers for each endpoint to perform data validation, interact with the database (using ORM/ODM), and apply business rules. Ensure proper error handling and response formatting (JSON). Integrate with the authentication module for protected endpoints.",
+            "status": "pending",
+            "testStrategy": "Write unit tests for individual business logic functions. Develop integration tests for each API endpoint using an HTTP client, covering successful operations, validation errors, and unauthorized access attempts. Use mock data for external dependencies where appropriate."
+          },
+          {
+            "id": 10,
+            "title": "Develop Initial Frontend User Interface Components",
+            "description": "Build the essential user interface components and pages required for core user interactions, such as login, dashboard, and data display.",
+            "dependencies": [],
+            "details": "Choose a frontend framework (e.g., React, Vue, Angular). Implement the login/registration pages that interact with the authentication API. Develop a basic dashboard or main view that consumes data from the core business logic API. Focus on responsive design and a clean user experience for critical flows.",
+            "status": "pending",
+            "testStrategy": "Write unit tests for individual UI components. Implement end-to-end tests using tools like Cypress or Playwright to simulate user flows (e.g., login, navigate to dashboard, view data). Conduct manual testing across different browsers and devices to ensure responsiveness and usability."
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Develop Synchronized Caption Generation and Burning",
+        "description": "Generate synchronized captions from the script and burn them onto the assembled video file.",
+        "details": "Use the script text and audio file duration to create a synchronized subtitle file (e.g., SRT). Use an FFmpeg command to 'burn' these captions directly onto the video created in the previous step, ensuring high-contrast styling for readability.",
+        "testStrategy": "Process a video and verify that the final MP4 has captions that are visually present, legible, and synchronized with the audio narration.",
+        "priority": "medium",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Build YouTube Metadata Generation with Gemini",
+        "description": "Use the Gemini API to generate an optimized title, description, and tags for the final video.",
+        "details": "Based on the original concept and script, prompt the Gemini API to create a compelling YouTube title, a detailed description, and a list of relevant SEO tags. Store this metadata temporarily for the upload process.",
+        "testStrategy": "Provide a sample script to the module. Verify that the output is a JSON object or similar structure containing a title, description, and a list of tags.",
+        "priority": "low",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement Automated YouTube Distribution",
+        "description": "Upload the final video file with its generated metadata directly to a specified YouTube channel using the YouTube Data API v3.",
+        "details": "Integrate with the YouTube Data API v3 using OAuth 2.0. Use the 'videos.insert' endpoint to upload the final MP4 file from the '/working_directory/final_videos/' folder. Set the video's title, description, and tags using the metadata from the previous step. Update the 'YouTube_URL' and 'Status' ('Complete') in the Google Sheet upon successful upload.",
+        "testStrategy": "Successfully upload a test video to a designated YouTube channel via the script. Verify the video is live (or scheduled) with the correct title and description. Confirm the Google Sheet is updated with the video URL and 'Complete' status.",
+        "priority": "low",
+        "dependencies": [
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-29T16:18:13.967Z",
+      "updated": "2025-08-29T16:57:22.588Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
