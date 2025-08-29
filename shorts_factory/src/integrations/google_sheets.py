@@ -171,6 +171,51 @@ class GoogleSheetsManager:
             self.logger.error(f"Failed to add content idea: {e}")
             return None
     
+    def get_all_content(self) -> List[Dict[str, Any]]:
+        """Get all content items from the spreadsheet (regardless of status)"""
+        try:
+            result = self.service.spreadsheets().values().get(
+                spreadsheetId=self.spreadsheet_id,
+                range='A:K'
+            ).execute()
+            
+            values = result.get('values', [])
+            
+            if not values:
+                return []
+            
+            headers = values[0]
+            all_content = []
+            
+            for i, row in enumerate(values[1:], start=2):  # Start from row 2
+                if len(row) >= 3:  # Ensure minimum columns (ID, SOURCE, TITLE)
+                    # Pad row to match expected columns
+                    while len(row) < 11:  # 11 columns total (A-K)
+                        row.append('')
+                    
+                    content_item = {
+                        'row_number': i,
+                        'id': row[0] if len(row) > 0 else '',
+                        'source': row[1] if len(row) > 1 else '',
+                        'title': row[2] if len(row) > 2 else '',
+                        'status': row[3] if len(row) > 3 else '',
+                        'script': row[4] if len(row) > 4 else '',
+                        'audio_file': row[5] if len(row) > 5 else '',
+                        'video_file': row[6] if len(row) > 6 else '',
+                        'youtube_url': row[7] if len(row) > 7 else '',
+                        'error_log': row[8] if len(row) > 8 else '',
+                        'created_date': row[9] if len(row) > 9 else '',
+                        'updated_date': row[10] if len(row) > 10 else ''
+                    }
+                    all_content.append(content_item)
+            
+            self.logger.info(f"Retrieved {len(all_content)} total content items")
+            return all_content
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get all content: {e}")
+            return []
+    
     def get_approved_content(self) -> List[Dict[str, Any]]:
         """Get all content items with 'Approved' status"""
         try:
@@ -211,6 +256,86 @@ class GoogleSheetsManager:
         except Exception as e:
             self.logger.error(f"Failed to get approved content: {e}")
             return []
+    
+    def update_content_field(self, content_id: str, field_name: str, value: str, note: str = "") -> bool:
+        """
+        Update a specific field for a content item by ID
+        
+        Args:
+            content_id: The ID of the content to update
+            field_name: The column name to update (e.g., 'SCRIPT', 'STATUS', 'AUDIO_FILE')
+            value: The new value for the field
+            note: Optional note to add to updated_date column
+            
+        Returns:
+            True if update successful, False otherwise
+        """
+        try:
+            # Find the row with the matching ID
+            all_data = self.service.spreadsheets().values().get(
+                spreadsheetId=self.spreadsheet_id,
+                range='A:K'
+            ).execute()
+            
+            values = all_data.get('values', [])
+            if len(values) <= 1:
+                self.logger.error(f"No data found in spreadsheet for content_id: {content_id}")
+                return False
+            
+            headers = values[0]
+            
+            # Find the content row
+            target_row = None
+            for i, row in enumerate(values[1:], start=2):
+                if len(row) > 0 and row[0] == content_id:
+                    target_row = i
+                    break
+            
+            if target_row is None:
+                self.logger.error(f"Content ID {content_id} not found in spreadsheet")
+                return False
+            
+            # Find the column for the field
+            if field_name not in self.COLUMNS:
+                self.logger.error(f"Unknown field name: {field_name}")
+                return False
+            
+            field_column = self.COLUMNS[field_name]
+            
+            # Update the field
+            update_range = f'{field_column}{target_row}'
+            update_body = {
+                'values': [[value]]
+            }
+            
+            self.service.spreadsheets().values().update(
+                spreadsheetId=self.spreadsheet_id,
+                range=update_range,
+                valueInputOption='RAW',
+                body=update_body
+            ).execute()
+            
+            # Update the UPDATED_DATE column if note provided
+            if note:
+                updated_date_column = self.COLUMNS['UPDATED_DATE']
+                updated_range = f'{updated_date_column}{target_row}'
+                updated_body = {
+                    'values': [[note]]
+                }
+                
+                self.service.spreadsheets().values().update(
+                    spreadsheetId=self.spreadsheet_id,
+                    range=updated_range,
+                    valueInputOption='RAW',
+                    body=updated_body
+                ).execute()
+            
+            self.logger.info(f"Updated {field_name} for content ID {content_id}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to update {field_name} for content ID {content_id}: {e}")
+            return False
     
     def update_content_status(self, content_id: str, status: str, **kwargs) -> bool:
         """Update the status and other fields for a content item"""

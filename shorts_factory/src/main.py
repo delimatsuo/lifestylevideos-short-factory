@@ -16,6 +16,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from core.config import config
 from core.content_ideation_engine import ContentIdeationEngine
+from core.approval_workflow import ApprovalWorkflowMonitor
+from core.script_generator import ScriptGenerator
 from integrations.google_sheets import GoogleSheetsManager
 from utils.logger import setup_logging
 
@@ -28,6 +30,8 @@ class ShortsFactory:
         self.logger = logging.getLogger(__name__)
         self.sheets_manager = None
         self.content_engine = None
+        self.approval_monitor = None
+        self.script_generator = None
         self.setup_complete = False
     
     def initialize(self) -> bool:
@@ -71,6 +75,24 @@ class ShortsFactory:
                 return False
             
             self.logger.info("✅ Content Ideation Engine initialized successfully")
+            
+            # Initialize Approval Workflow Monitor
+            self.logger.info("🔍 Initializing Approval Workflow Monitor...")
+            self.approval_monitor = ApprovalWorkflowMonitor()
+            if not self.approval_monitor.initialize():
+                self.logger.error("❌ Approval Workflow Monitor initialization failed")
+                return False
+            
+            self.logger.info("✅ Approval Workflow Monitor initialized successfully")
+            
+            # Initialize Script Generator
+            self.logger.info("🎬 Initializing Script Generator...")
+            self.script_generator = ScriptGenerator()
+            if not self.script_generator.initialize():
+                self.logger.error("❌ Script Generator initialization failed")
+                return False
+            
+            self.logger.info("✅ Script Generator initialized successfully")
             
             # Create working directories
             self.logger.info("📁 Setting up working directories...")
@@ -123,18 +145,61 @@ class ShortsFactory:
             else:
                 self.logger.warning("⚠️ Content ideation completed but no ideas were added to dashboard")
             
-            # Phase 2: Process Approved Content
-            self.logger.info("🎬 Phase 2: Content Processing")
-            approved_content = self.sheets_manager.get_approved_content()
+            # Phase 2: Approval Workflow Monitoring (NEW - IMPLEMENTED!)
+            self.logger.info("🔍 Phase 2: Approval Workflow Monitoring")
             
-            if approved_content:
-                self.logger.info(f"Found {len(approved_content)} approved content items for processing")
-                for content in approved_content:
-                    self.logger.info(f"  - ID {content['id']}: {content['title']}")
-                    # TODO: Process each approved content item (Tasks 3-9)
-                    # This will be implemented in subsequent tasks
+            # Check for newly approved content
+            approval_results = self.approval_monitor.run_approval_monitor_cycle()
+            
+            if approval_results.get('newly_approved_count', 0) > 0:
+                approved_items = approval_results['approved_items']
+                self.logger.info(f"🎉 Found {len(approved_items)} newly approved content items!")
+                
+                # Process each newly approved item
+                for content in approved_items:
+                    content_id = content.get('id', '')
+                    title = content.get('title', 'Untitled')
+                    
+                    self.logger.info(f"📝 Processing approved content: ID {content_id} - {title}")
+                    
+                    # Mark as processing
+                    if self.approval_monitor.mark_as_processing(content_id, title):
+                        # TASK #4: GENERATE SCRIPT FOR APPROVED CONTENT
+                        self.logger.info(f"🎬 Starting script generation for: {title}")
+                        
+                        try:
+                            # Generate script using ScriptGenerator
+                            script_success = self.script_generator.generate_and_save_script(content)
+                            
+                            if script_success:
+                                self.logger.info(f"✅ Script generated and saved for: {title}")
+                                
+                                # Mark as completed with script generation info
+                                self.approval_monitor.mark_as_completed(
+                                    content_id, 
+                                    {
+                                        'script_generated': 'Yes',
+                                        'processed_stage': 'Script Generation (Task #4)',
+                                        'next_stage': 'Audio Generation (Task #5)'
+                                    }
+                                )
+                                self.logger.info(f"🎉 Content processing complete (Task #4): {title}")
+                                
+                            else:
+                                # Script generation failed
+                                error_msg = "Script generation failed"
+                                self.approval_monitor.mark_as_failed(content_id, error_msg)
+                                self.logger.error(f"❌ Script generation failed for: {title}")
+                                
+                        except Exception as e:
+                            # Handle any unexpected errors
+                            error_msg = f"Script generation error: {str(e)}"
+                            self.approval_monitor.mark_as_failed(content_id, error_msg)
+                            self.logger.error(f"❌ Error during script generation for {title}: {e}")
+                    else:
+                        self.logger.error(f"❌ Failed to mark content as processing: {content_id}")
             else:
-                self.logger.info("No approved content found to process")
+                self.logger.info("📊 No newly approved content found")
             
             # Phase 3: Video Assembly (will be implemented in Task 7)  
             self.logger.info("🎥 Phase 3: Video Assembly - TODO")
