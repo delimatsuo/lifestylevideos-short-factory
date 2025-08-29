@@ -19,6 +19,7 @@ from core.content_ideation_engine import ContentIdeationEngine
 from core.approval_workflow import ApprovalWorkflowMonitor
 from core.script_generator import ScriptGenerator
 from core.audio_generator import AudioGenerator
+from core.video_sourcing import VideoSourcingManager
 from integrations.google_sheets import GoogleSheetsManager
 from utils.logger import setup_logging
 
@@ -34,6 +35,7 @@ class ShortsFactory:
         self.approval_monitor = None
         self.script_generator = None
         self.audio_generator = None
+        self.video_sourcing = None
         self.setup_complete = False
     
     def initialize(self) -> bool:
@@ -104,6 +106,15 @@ class ShortsFactory:
                 return False
             
             self.logger.info("✅ Audio Generator initialized successfully")
+            
+            # Initialize Video Sourcing Manager
+            self.logger.info("🎥 Initializing Video Sourcing Manager...")
+            self.video_sourcing = VideoSourcingManager()
+            if not self.video_sourcing.initialize():
+                self.logger.error("❌ Video Sourcing Manager initialization failed")
+                return False
+            
+            self.logger.info("✅ Video Sourcing Manager initialized successfully")
             
             # Create working directories
             self.logger.info("📁 Setting up working directories...")
@@ -195,17 +206,60 @@ class ShortsFactory:
                                     if audio_success:
                                         self.logger.info(f"✅ Audio generated and saved for: {title}")
                                         
-                                        # Mark as completed with both script and audio generation info
-                                        self.approval_monitor.mark_as_completed(
-                                            content_id, 
-                                            {
-                                                'script_generated': 'Yes',
-                                                'audio_generated': 'Yes',
-                                                'processed_stage': 'Audio Generation (Task #5)',
-                                                'next_stage': 'Visual Content (Task #6)'
-                                            }
-                                        )
-                                        self.logger.info(f"🎉 Content processing complete (Tasks #4 & #5): {title}")
+                                        # TASK #6: SOURCE VIDEO CLIPS
+                                        self.logger.info(f"🎥 Starting video sourcing for: {title}")
+                                        
+                                        try:
+                                            # Source videos using VideoSourcingManager
+                                            video_success = self.video_sourcing.source_and_save_videos(content)
+                                            
+                                            if video_success:
+                                                self.logger.info(f"✅ Videos sourced and saved for: {title}")
+                                                
+                                                # Mark as completed with script, audio, and video info
+                                                self.approval_monitor.mark_as_completed(
+                                                    content_id, 
+                                                    {
+                                                        'script_generated': 'Yes',
+                                                        'audio_generated': 'Yes',
+                                                        'videos_sourced': 'Yes',
+                                                        'processed_stage': 'Video Sourcing (Task #6)',
+                                                        'next_stage': 'Video Assembly (Task #7)'
+                                                    }
+                                                )
+                                                self.logger.info(f"🎉 Content processing complete (Tasks #4, #5 & #6): {title}")
+                                                
+                                            else:
+                                                # Video sourcing failed, but script and audio succeeded
+                                                self.logger.warning(f"⚠️ Script+Audio OK but video sourcing failed for: {title}")
+                                                
+                                                # Mark as partial success
+                                                self.approval_monitor.mark_as_completed(
+                                                    content_id,
+                                                    {
+                                                        'script_generated': 'Yes',
+                                                        'audio_generated': 'Yes',
+                                                        'videos_sourced': 'Failed',
+                                                        'processed_stage': 'Audio Generation (Task #5)',
+                                                        'note': 'Video sourcing failed - ready for retry or manual video'
+                                                    }
+                                                )
+                                                
+                                        except Exception as e:
+                                            # Handle video sourcing errors
+                                            self.logger.error(f"❌ Error during video sourcing for {title}: {e}")
+                                            
+                                            # Mark as partial success (script and audio worked)
+                                            self.approval_monitor.mark_as_completed(
+                                                content_id,
+                                                {
+                                                    'script_generated': 'Yes',
+                                                    'audio_generated': 'Yes',
+                                                    'videos_sourced': 'Error',
+                                                    'processed_stage': 'Audio Generation (Task #5)',
+                                                    'error': str(e)
+                                                }
+                                            )
                                         
                                     else:
                                         # Audio generation failed, but script succeeded
