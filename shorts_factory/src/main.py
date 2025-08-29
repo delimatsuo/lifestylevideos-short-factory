@@ -18,6 +18,7 @@ from core.config import config
 from core.content_ideation_engine import ContentIdeationEngine
 from core.approval_workflow import ApprovalWorkflowMonitor
 from core.script_generator import ScriptGenerator
+from core.audio_generator import AudioGenerator
 from integrations.google_sheets import GoogleSheetsManager
 from utils.logger import setup_logging
 
@@ -32,6 +33,7 @@ class ShortsFactory:
         self.content_engine = None
         self.approval_monitor = None
         self.script_generator = None
+        self.audio_generator = None
         self.setup_complete = False
     
     def initialize(self) -> bool:
@@ -93,6 +95,15 @@ class ShortsFactory:
                 return False
             
             self.logger.info("✅ Script Generator initialized successfully")
+            
+            # Initialize Audio Generator
+            self.logger.info("🎙️ Initializing Audio Generator...")
+            self.audio_generator = AudioGenerator()
+            if not self.audio_generator.initialize():
+                self.logger.error("❌ Audio Generator initialization failed")
+                return False
+            
+            self.logger.info("✅ Audio Generator initialized successfully")
             
             # Create working directories
             self.logger.info("📁 Setting up working directories...")
@@ -174,16 +185,57 @@ class ShortsFactory:
                             if script_success:
                                 self.logger.info(f"✅ Script generated and saved for: {title}")
                                 
-                                # Mark as completed with script generation info
-                                self.approval_monitor.mark_as_completed(
-                                    content_id, 
-                                    {
-                                        'script_generated': 'Yes',
-                                        'processed_stage': 'Script Generation (Task #4)',
-                                        'next_stage': 'Audio Generation (Task #5)'
-                                    }
-                                )
-                                self.logger.info(f"🎉 Content processing complete (Task #4): {title}")
+                                # TASK #5: GENERATE AUDIO FROM SCRIPT
+                                self.logger.info(f"🎙️ Starting audio generation for: {title}")
+                                
+                                try:
+                                    # Generate audio using AudioGenerator
+                                    audio_success = self.audio_generator.generate_and_save_audio(content)
+                                    
+                                    if audio_success:
+                                        self.logger.info(f"✅ Audio generated and saved for: {title}")
+                                        
+                                        # Mark as completed with both script and audio generation info
+                                        self.approval_monitor.mark_as_completed(
+                                            content_id, 
+                                            {
+                                                'script_generated': 'Yes',
+                                                'audio_generated': 'Yes',
+                                                'processed_stage': 'Audio Generation (Task #5)',
+                                                'next_stage': 'Visual Content (Task #6)'
+                                            }
+                                        )
+                                        self.logger.info(f"🎉 Content processing complete (Tasks #4 & #5): {title}")
+                                        
+                                    else:
+                                        # Audio generation failed, but script succeeded
+                                        self.logger.warning(f"⚠️ Script OK but audio generation failed for: {title}")
+                                        
+                                        # Mark as partial success
+                                        self.approval_monitor.mark_as_completed(
+                                            content_id,
+                                            {
+                                                'script_generated': 'Yes',
+                                                'audio_generated': 'Failed',
+                                                'processed_stage': 'Script Generation (Task #4)',
+                                                'note': 'Audio generation needs retry'
+                                            }
+                                        )
+                                        
+                                except Exception as e:
+                                    # Handle audio generation errors
+                                    self.logger.error(f"❌ Error during audio generation for {title}: {e}")
+                                    
+                                    # Mark as partial success (script worked)
+                                    self.approval_monitor.mark_as_completed(
+                                        content_id,
+                                        {
+                                            'script_generated': 'Yes',
+                                            'audio_generated': 'Error',
+                                            'processed_stage': 'Script Generation (Task #4)',
+                                            'error': str(e)
+                                        }
+                                    )
                                 
                             else:
                                 # Script generation failed
