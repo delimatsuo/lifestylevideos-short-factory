@@ -21,6 +21,7 @@ from core.script_generator import ScriptGenerator
 from core.audio_generator import AudioGenerator
 from core.video_sourcing import VideoSourcingManager
 from core.video_assembly import VideoAssemblyManager
+from core.caption_manager import CaptionManager
 from integrations.google_sheets import GoogleSheetsManager
 from utils.logger import setup_logging
 
@@ -38,6 +39,7 @@ class ShortsFactory:
         self.audio_generator = None
         self.video_sourcing = None
         self.video_assembly = None
+        self.caption_manager = None
         self.setup_complete = False
     
     def initialize(self) -> bool:
@@ -127,6 +129,15 @@ class ShortsFactory:
             
             self.logger.info("✅ Video Assembly Manager initialized successfully")
             
+            # Initialize Caption Manager (NEW - TASK #8!)
+            self.logger.info("📝 Initializing Caption Manager...")
+            self.caption_manager = CaptionManager()
+            if not self.caption_manager.initialize():
+                self.logger.error("❌ Caption Manager initialization failed")
+                return False
+            
+            self.logger.info("✅ Caption Manager initialized successfully")
+            
             # Create working directories
             self.logger.info("📁 Setting up working directories...")
             self._setup_working_directories()
@@ -145,6 +156,8 @@ class ShortsFactory:
             config.working_directory / 'audio',
             config.working_directory / 'video_clips', 
             config.working_directory / 'final_videos',
+            config.working_directory / 'captions',
+            config.working_directory / 'captioned_videos',
             config.working_directory / 'background_loops',
             config.working_directory / 'logs'
         ]
@@ -387,8 +400,32 @@ class ShortsFactory:
             else:
                 self.logger.info("📊 No content ready for video assembly")
             
-            # Phase 4: Distribution (will be implemented in Task 10)
-            self.logger.info("📤 Phase 4: Distribution - TODO")
+            # Phase 4: Caption Generation (NEW - TASK #8 IMPLEMENTED!)
+            self.logger.info("📝 Phase 4: Caption Generation")
+            
+            # Check for content ready for caption generation
+            caption_results = self.caption_manager.run_caption_generation_cycle()
+            
+            if caption_results.get('total_ready', 0) > 0:
+                captioned_count = caption_results.get('successfully_captioned', 0)
+                failed_count = caption_results.get('failed_captioning', 0)
+                
+                self.logger.info(f"🎉 Caption generation results: {captioned_count} successful, {failed_count} failed")
+                
+                if captioned_count > 0:
+                    self.logger.info("📝 Successfully captioned videos:")
+                    for item in caption_results.get('captioned_items', []):
+                        self.logger.info(f"   ✅ {item.get('title', 'Unknown')} (ID: {item.get('id', 'Unknown')})")
+                
+                if failed_count > 0:
+                    self.logger.warning("⚠️ Failed caption generations:")
+                    for item in caption_results.get('failed_items', []):
+                        self.logger.warning(f"   ❌ {item.get('title', 'Unknown')} (ID: {item.get('id', 'Unknown')})")
+            else:
+                self.logger.info("📊 No content ready for caption generation")
+            
+            # Phase 5: Distribution (will be implemented in later tasks)
+            self.logger.info("📤 Phase 5: Distribution - TODO")
             
             self.logger.info("✅ Daily pipeline execution complete")
             

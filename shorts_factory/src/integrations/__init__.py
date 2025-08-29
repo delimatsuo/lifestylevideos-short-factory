@@ -8,5 +8,7 @@ from integrations.reddit_api import RedditContentExtractor
 from integrations.elevenlabs_api import ElevenLabsTextToSpeech
 from integrations.pexels_api import PexelsVideoSourcing
 from integrations.ffmpeg_video import FFmpegVideoAssembly
+from integrations.caption_generator import SRTCaptionGenerator
+from integrations.ffmpeg_captions import FFmpegCaptionBurner
 
-__all__ = ['GoogleSheetsManager', 'GeminiContentGenerator', 'RedditContentExtractor', 'ElevenLabsTextToSpeech', 'PexelsVideoSourcing', 'FFmpegVideoAssembly']
+__all__ = ['GoogleSheetsManager', 'GeminiContentGenerator', 'RedditContentExtractor', 'ElevenLabsTextToSpeech', 'PexelsVideoSourcing', 'FFmpegVideoAssembly', 'SRTCaptionGenerator', 'FFmpegCaptionBurner']
