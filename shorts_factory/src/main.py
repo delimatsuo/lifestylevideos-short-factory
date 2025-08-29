@@ -20,6 +20,7 @@ from core.approval_workflow import ApprovalWorkflowMonitor
 from core.script_generator import ScriptGenerator
 from core.audio_generator import AudioGenerator
 from core.video_sourcing import VideoSourcingManager
+from core.video_assembly import VideoAssemblyManager
 from integrations.google_sheets import GoogleSheetsManager
 from utils.logger import setup_logging
 
@@ -36,6 +37,7 @@ class ShortsFactory:
         self.script_generator = None
         self.audio_generator = None
         self.video_sourcing = None
+        self.video_assembly = None
         self.setup_complete = False
     
     def initialize(self) -> bool:
@@ -115,6 +117,15 @@ class ShortsFactory:
                 return False
             
             self.logger.info("✅ Video Sourcing Manager initialized successfully")
+            
+            # Initialize Video Assembly Manager (NEW - TASK #7!)
+            self.logger.info("🎬 Initializing Video Assembly Manager...")
+            self.video_assembly = VideoAssemblyManager()
+            if not self.video_assembly.initialize():
+                self.logger.error("❌ Video Assembly Manager initialization failed")
+                return False
+            
+            self.logger.info("✅ Video Assembly Manager initialized successfully")
             
             # Create working directories
             self.logger.info("📁 Setting up working directories...")
@@ -216,18 +227,63 @@ class ShortsFactory:
                                             if video_success:
                                                 self.logger.info(f"✅ Videos sourced and saved for: {title}")
                                                 
-                                                # Mark as completed with script, audio, and video info
-                                                self.approval_monitor.mark_as_completed(
-                                                    content_id, 
-                                                    {
-                                                        'script_generated': 'Yes',
-                                                        'audio_generated': 'Yes',
-                                                        'videos_sourced': 'Yes',
-                                                        'processed_stage': 'Video Sourcing (Task #6)',
-                                                        'next_stage': 'Video Assembly (Task #7)'
-                                                    }
-                                                )
-                                                self.logger.info(f"🎉 Content processing complete (Tasks #4, #5 & #6): {title}")
+                                                # TASK #7: ASSEMBLE FINAL VIDEO
+                                                self.logger.info(f"🎬 Starting video assembly for: {title}")
+                                                
+                                                try:
+                                                    # Assemble final video using VideoAssemblyManager
+                                                    assembly_success = self.video_assembly.assemble_video_for_content(content)
+                                                    
+                                                    if assembly_success:
+                                                        self.logger.info(f"✅ Video assembled successfully for: {title}")
+                                                        
+                                                        # Mark as completed with full pipeline success
+                                                        self.approval_monitor.mark_as_completed(
+                                                            content_id,
+                                                            {
+                                                                'script_generated': 'Yes',
+                                                                'audio_generated': 'Yes',
+                                                                'videos_sourced': 'Yes',
+                                                                'video_assembled': 'Yes',
+                                                                'processed_stage': 'Video Assembly (Task #7)',
+                                                                'next_stage': 'Upload to YouTube (Task #8)'
+                                                            }
+                                                        )
+                                                        self.logger.info(f"🎉 COMPLETE PIPELINE SUCCESS (Tasks #4-#7): {title}")
+                                                        
+                                                    else:
+                                                        # Video assembly failed, but everything else succeeded
+                                                        self.logger.warning(f"⚠️ Script+Audio+Video OK but assembly failed for: {title}")
+                                                        
+                                                        # Mark as partial success - ready for manual assembly or retry
+                                                        self.approval_monitor.mark_as_completed(
+                                                            content_id,
+                                                            {
+                                                                'script_generated': 'Yes',
+                                                                'audio_generated': 'Yes',
+                                                                'videos_sourced': 'Yes',
+                                                                'video_assembled': 'Failed',
+                                                                'processed_stage': 'Video Sourcing (Task #6)',
+                                                                'note': 'Video assembly failed - components ready for retry'
+                                                            }
+                                                        )
+                                                        
+                                                except Exception as e:
+                                                    # Handle video assembly errors
+                                                    self.logger.error(f"❌ Error during video assembly for {title}: {e}")
+                                                    
+                                                    # Mark as partial success (all components ready)
+                                                    self.approval_monitor.mark_as_completed(
+                                                        content_id,
+                                                        {
+                                                            'script_generated': 'Yes',
+                                                            'audio_generated': 'Yes',
+                                                            'videos_sourced': 'Yes',
+                                                            'video_assembled': 'Error',
+                                                            'processed_stage': 'Video Sourcing (Task #6)',
+                                                            'error': f"Video assembly error: {str(e)}"
+                                                        }
+                                                    )
                                                 
                                             else:
                                                 # Video sourcing failed, but script and audio succeeded
@@ -307,8 +363,29 @@ class ShortsFactory:
             else:
                 self.logger.info("📊 No newly approved content found")
             
-            # Phase 3: Video Assembly (will be implemented in Task 7)  
-            self.logger.info("🎥 Phase 3: Video Assembly - TODO")
+            # Phase 3: Video Assembly (NEW - TASK #7 IMPLEMENTED!)
+            self.logger.info("🎬 Phase 3: Video Assembly")
+            
+            # Check for content ready for video assembly
+            assembly_results = self.video_assembly.run_video_assembly_cycle()
+            
+            if assembly_results.get('total_ready', 0) > 0:
+                assembled_count = assembly_results.get('successfully_assembled', 0)
+                failed_count = assembly_results.get('failed_assembly', 0)
+                
+                self.logger.info(f"🎉 Video assembly results: {assembled_count} successful, {failed_count} failed")
+                
+                if assembled_count > 0:
+                    self.logger.info("🎬 Successfully assembled videos:")
+                    for item in assembly_results.get('assembled_items', []):
+                        self.logger.info(f"   ✅ {item.get('title', 'Unknown')} (ID: {item.get('id', 'Unknown')})")
+                
+                if failed_count > 0:
+                    self.logger.warning("⚠️ Failed video assemblies:")
+                    for item in assembly_results.get('failed_items', []):
+                        self.logger.warning(f"   ❌ {item.get('title', 'Unknown')} (ID: {item.get('id', 'Unknown')})")
+            else:
+                self.logger.info("📊 No content ready for video assembly")
             
             # Phase 4: Distribution (will be implemented in Task 10)
             self.logger.info("📤 Phase 4: Distribution - TODO")

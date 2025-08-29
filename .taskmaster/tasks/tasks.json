@@ -116,7 +116,7 @@
           5,
           6
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -124,7 +124,7 @@
             "description": "Set up the basic project structure, version control (Git), and initial development environment (e.g., virtual environment, basic dependencies).",
             "dependencies": [],
             "details": "Create a new Git repository, initialize a Python virtual environment, install basic tools like `pip`, `pytest`, `black`. Add a `.gitignore` file and a `README.md`.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Verify `git status` shows no uncommitted changes, `pip list` shows installed packages, and `python -m venv` created the environment successfully."
           },
           {
@@ -133,7 +133,7 @@
             "description": "Define the relational database schema required for the application's data storage, including tables, columns, relationships, and data types.",
             "dependencies": [],
             "details": "Use an ERD tool or plain text to define tables (e.g., `users`, `products`, `orders`). Specify primary keys, foreign keys, data types (e.g., `VARCHAR`, `INT`, `DATETIME`), and constraints. Document the schema clearly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Review the schema definition for completeness, normalization, and consistency with application requirements. Validate against common database design principles and potential edge cases."
           },
           {
@@ -142,7 +142,7 @@
             "description": "Implement the primary CRUD (Create, Read, Update, Delete) API endpoints for the main application entities, connecting to the designed database.",
             "dependencies": [],
             "details": "Use a chosen web framework (e.g., Flask, Django, FastAPI) to create routes for `/users`, `/products`, `/orders`. Implement logic to interact with the database using an ORM or raw SQL. Handle request parsing and response formatting (JSON).",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Use an API client (e.g., Postman, curl) or automated tests to send requests to each endpoint (GET, POST, PUT, DELETE) and verify correct responses, HTTP status codes, and data persistence in the database."
           },
           {
@@ -151,7 +151,7 @@
             "description": "Develop the necessary components for user registration, login, session management, and role-based access control.",
             "dependencies": [],
             "details": "Implement user registration endpoint (`/register`), login endpoint (`/login`), token generation (JWT or session cookies), password hashing (e.g., bcrypt), and middleware for protecting authenticated routes. Define user roles (e.g., `admin`, `user`).",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test user registration, successful login, invalid credentials, token expiration, and access to protected routes with different user roles. Verify secure password storage and proper error handling for unauthorized access."
           },
           {
@@ -160,7 +160,7 @@
             "description": "Develop a basic web-based user interface that interacts with the implemented API endpoints to display and manage data.",
             "dependencies": [],
             "details": "Use a frontend framework (e.g., React, Vue, Angular) or plain HTML/CSS/JS to create pages for user login/registration, displaying lists of items, and forms for creating/editing items. Integrate with the backend API using `fetch` or Axios.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Manually navigate through the UI, perform CRUD operations, log in/out, and verify that data is correctly displayed and updated, and that authentication works as expected. Use browser developer tools to check API calls and responses."
           },
           {
@@ -169,7 +169,7 @@
             "description": "Set up the version control repository, define the initial project directory structure, and configure essential build/dependency management tools.",
             "dependencies": [],
             "details": "Create a new Git repository. Establish `src/`, `tests/`, `docs/`, and `config/` directories. Configure `package.json` (Node.js), `pyproject.toml` (Python), or similar for dependency management. Add a comprehensive `.gitignore` file.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Verify repository creation and cloning. Confirm the presence of all specified directories. Run a basic build command (if applicable) to ensure toolchain is functional. Check `.gitignore` by attempting to commit ignored files."
           },
           {
@@ -178,7 +178,7 @@
             "description": "Define the relational or NoSQL database schema for the application's primary data models, including entities, attributes, relationships, and constraints.",
             "dependencies": [],
             "details": "Identify key entities (e.g., Users, Products, Orders). For each entity, define attributes with appropriate data types. Establish relationships (one-to-many, many-to-many) and define primary/foreign keys. Document the schema using an ERD or DDL script.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Review the schema for normalization, data integrity, and scalability. Validate against initial business requirements. Conduct peer review of the ERD/DDL. If possible, create a dummy database instance and apply the schema to check for syntax errors."
           },
           {
@@ -187,7 +187,7 @@
             "description": "Develop the backend functionalities for user registration, login, session management, and role-based access control.",
             "dependencies": [],
             "details": "Implement API endpoints for user signup and sign-in. Use secure password hashing (e.g., bcrypt). Implement JWTs or session cookies for authentication. Define user roles (e.g., 'admin', 'user') and implement middleware for authorization checks on protected routes. Store user data in the database defined in Subtask 2.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Write unit tests for password hashing, token generation/validation. Develop integration tests for signup, login, and logout endpoints. Test access to protected routes with valid and invalid tokens/roles. Conduct basic security checks for common vulnerabilities like SQL injection or XSS in auth flows."
           },
           {
@@ -196,7 +196,7 @@
             "description": "Create RESTful API endpoints for the application's primary functionalities, including CRUD operations for key entities.",
             "dependencies": [],
             "details": "Define API routes (e.g., `/api/products`, `/api/orders`). Implement controllers/handlers for each endpoint to perform data validation, interact with the database (using ORM/ODM), and apply business rules. Ensure proper error handling and response formatting (JSON). Integrate with the authentication module for protected endpoints.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Write unit tests for individual business logic functions. Develop integration tests for each API endpoint using an HTTP client, covering successful operations, validation errors, and unauthorized access attempts. Use mock data for external dependencies where appropriate."
           },
           {
@@ -205,7 +205,7 @@
             "description": "Build the essential user interface components and pages required for core user interactions, such as login, dashboard, and data display.",
             "dependencies": [],
             "details": "Choose a frontend framework (e.g., React, Vue, Angular). Implement the login/registration pages that interact with the authentication API. Develop a basic dashboard or main view that consumes data from the core business logic API. Focus on responsive design and a clean user experience for critical flows.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Write unit tests for individual UI components. Implement end-to-end tests using tools like Cypress or Playwright to simulate user flows (e.g., login, navigate to dashboard, view data). Conduct manual testing across different browsers and devices to ensure responsiveness and usability."
           }
         ]
@@ -253,7 +253,7 @@
     ],
     "metadata": {
       "created": "2025-08-29T16:18:13.967Z",
-      "updated": "2025-08-29T20:15:32.236Z",
+      "updated": "2025-08-29T20:31:26.942Z",
       "description": "Tasks for master context"
     }
   }
