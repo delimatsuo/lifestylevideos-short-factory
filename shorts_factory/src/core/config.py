@@ -39,7 +39,16 @@ class Config:
     # AI Services Configuration
     @property
     def google_gemini_api_key(self) -> str:
-        return self._get_required_env('GOOGLE_GEMINI_API_KEY')
+        # Try GOOGLE_GEMINI_API_KEY first, fallback to GOOGLE_API_KEY
+        gemini_key = os.getenv('GOOGLE_GEMINI_API_KEY')
+        google_key = os.getenv('GOOGLE_API_KEY')
+        
+        if gemini_key and not gemini_key.startswith('your_'):
+            return gemini_key
+        elif google_key and not google_key.startswith('your_'):
+            return google_key
+        else:
+            raise ValueError("No valid Google API key found. Set either GOOGLE_GEMINI_API_KEY or GOOGLE_API_KEY")
     
     @property
     def elevenlabs_api_key(self) -> str:

@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from core.config import config
+from core.content_ideation_engine import ContentIdeationEngine
 from integrations.google_sheets import GoogleSheetsManager
 from utils.logger import setup_logging
 
@@ -26,6 +27,7 @@ class ShortsFactory:
         """Initialize Shorts Factory"""
         self.logger = logging.getLogger(__name__)
         self.sheets_manager = None
+        self.content_engine = None
         self.setup_complete = False
     
     def initialize(self) -> bool:
@@ -60,6 +62,15 @@ class ShortsFactory:
                 return False
             
             self.logger.info("✅ Dashboard schema configured successfully")
+            
+            # Initialize Content Ideation Engine
+            self.logger.info("💡 Initializing Content Ideation Engine...")
+            self.content_engine = ContentIdeationEngine()
+            if not self.content_engine.initialize():
+                self.logger.error("❌ Content Ideation Engine initialization failed")
+                return False
+            
+            self.logger.info("✅ Content Ideation Engine initialized successfully")
             
             # Create working directories
             self.logger.info("📁 Setting up working directories...")
@@ -96,18 +107,31 @@ class ShortsFactory:
         self.logger.info("🔄 Starting daily content pipeline...")
         
         try:
-            # Phase 1: Content Ideation (will be implemented in Task 2)
-            self.logger.info("💡 Phase 1: Content Ideation - TODO")
+            # Phase 1: Content Ideation (NEW - IMPLEMENTED!)
+            self.logger.info("💡 Phase 1: Content Ideation")
             
-            # Phase 2: Process Approved Content (will be implemented in subsequent tasks)
-            self.logger.info("🎬 Phase 2: Content Processing - TODO") 
+            # Run content ideation cycle
+            ideation_results = self.content_engine.run_ideation_cycle(
+                gemini_ideas=15,  # Generate 15 ideas from Gemini
+                reddit_stories=10  # Extract 10 stories from Reddit
+            )
+            
+            if ideation_results.get('successful_uploads', 0) > 0:
+                self.logger.info(f"✅ Content ideation successful: {ideation_results['successful_uploads']} new ideas added to dashboard")
+                self.logger.info(f"   - Gemini ideas: {ideation_results['gemini_ideas']}")
+                self.logger.info(f"   - Reddit stories: {ideation_results['reddit_ideas']}")
+            else:
+                self.logger.warning("⚠️ Content ideation completed but no ideas were added to dashboard")
+            
+            # Phase 2: Process Approved Content
+            self.logger.info("🎬 Phase 2: Content Processing")
             approved_content = self.sheets_manager.get_approved_content()
             
             if approved_content:
-                self.logger.info(f"Found {len(approved_content)} approved content items")
+                self.logger.info(f"Found {len(approved_content)} approved content items for processing")
                 for content in approved_content:
                     self.logger.info(f"  - ID {content['id']}: {content['title']}")
-                    # TODO: Process each approved content item
+                    # TODO: Process each approved content item (Tasks 3-9)
                     # This will be implemented in subsequent tasks
             else:
                 self.logger.info("No approved content found to process")
