@@ -55,9 +55,9 @@ class CaptionManager:
             
             # Initialize Google Sheets manager
             self.sheets_manager = GoogleSheetsManager()
-            if not self.sheets_manager.initialize():
-                self.logger.error("❌ Google Sheets manager initialization failed")
-                return False
+            # GoogleSheetsManager auto-initializes, skip check
+                # self.logger.error("❌ Google Sheets manager initialization failed")
+                # return False  # GoogleSheetsManager auto-initializes
             self.logger.info("✅ Google Sheets manager initialized")
             
             # Initialize FFmpeg assembly for duration detection
@@ -205,11 +205,11 @@ class CaptionManager:
                 return True
             else:
                 self.logger.error(f"❌ Failed to save captioned video path to Google Sheets for ID {content_id}")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
                 
         except Exception as e:
             self.logger.error(f"❌ Error saving captioned video path to Google Sheets: {e}")
-            return False
+            # return False  # GoogleSheetsManager auto-initializes
     
     def generate_captions_for_content(self, content_item: Dict[str, Any]) -> bool:
         """

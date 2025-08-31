@@ -249,11 +249,59 @@
         ],
         "status": "done",
         "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Implement Viral Content Theme Engine",
+        "description": "Develop a module to generate content ideas optimized for viral potential across specific themes (family, self-help, news, Reddit) by leveraging prompt engineering.",
+        "details": "This task involves creating a component that refines or generates content ideas with a focus on virality for 'family', 'self-help', 'news', and 'Reddit' themes. It will integrate with the existing content ideation engine (Task 2) to utilize its Gemini and Reddit API capabilities. For each theme, define and implement specific prompt engineering strategies for the Gemini API to generate highly engaging and shareable content concepts. For 'Reddit' themes, analyze trending posts and subreddits to identify common viral patterns (e.g., specific question types, emotional hooks, controversial angles) and incorporate these insights into the prompt optimization. The output should be refined content concepts, potentially including suggested viral hooks or titles, and a brief explanation of the viral angle. These optimized ideas should be populated into the Google Sheet, potentially updating existing 'Pending Approval' ideas or adding new ones with a 'Viral Optimized' tag.",
+        "testStrategy": "For each of the 'family', 'self-help', 'news', and 'Reddit' themes, execute the viral content theme engine. Verify that the generated content ideas are distinctly optimized for virality within their respective themes, showing clear evidence of prompt engineering (e.g., specific tone, keywords, or angles). Confirm that the output is correctly formatted and accurately populates or updates the Google Sheet with the refined ideas and any associated viral tags. Manually review a sample of generated ideas for perceived virality, theme adherence, and overall quality. Test edge cases, such as providing minimal initial input to see if the engine can still generate theme-optimized viral ideas from scratch.",
+        "status": "pending",
+        "dependencies": [
+          2,
+          3
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Create queue-based video processing system with async pipeline stages and error recovery",
+        "description": "Design and implement a robust, scalable, and fault-tolerant queue-based system to orchestrate the video creation pipeline, ensuring asynchronous execution of stages and comprehensive error recovery mechanisms.",
+        "details": "This task involves refactoring the existing video processing workflow into a series of decoupled, asynchronous stages managed by a message queue. \n\n1.  **Choose a Message Queue**: Select and integrate a suitable message queue technology (e.g., Celery with Redis/RabbitMQ, or a cloud-native solution like AWS SQS/SNS or Google Cloud Pub/Sub) that aligns with the existing Python environment.\n2.  **Define Pipeline Stages as Tasks**: Each major processing step (script generation, video assembly, captioning, metadata generation, YouTube distribution) must be encapsulated as an independent, idempotent task that can be added to and consumed from the message queue.\n3.  **Orchestration Logic**: Modify the main orchestration script (currently triggered by Task 3) to enqueue the initial task (e.g., script generation) when a new video request is approved in the Google Sheet. Subsequent stages will be triggered by the successful completion of the preceding stage, pushing a new message to the next queue.\n4.  **Asynchronous Workers**: Implement worker processes that continuously listen to the queues, pick up tasks, execute the corresponding processing logic, and update the status in the Google Sheet.\n5.  **Error Handling and Recovery**: \n    *   Implement retry mechanisms for transient failures (e.g., API rate limits, temporary network issues).\n    *   Configure Dead-Letter Queues (DLQs) for tasks that fail persistently after retries, allowing for manual inspection and re-processing.\n    *   Ensure that the Google Sheet status is updated to 'Failed' with relevant error details if a task ultimately fails.\n6.  **State Management**: Design a mechanism to pass necessary context (e.g., Google Sheet row ID, paths to intermediate video/audio files, generated script text) between pipeline stages, possibly via message payloads or a shared, persistent storage (e.g., cloud storage for files, or a database for metadata).\n7.  **Monitoring and Logging**: Integrate comprehensive logging for each task's execution status, success, and failure, and set up basic monitoring for queue lengths and worker health.",
+        "testStrategy": "1.  **Unit Tests**: Develop unit tests for each refactored pipeline stage to ensure they function correctly as standalone tasks with various inputs.\n2.  **Integration Tests**: \n    *   Trigger a new video creation request via the Google Sheet (as per Task 3) and verify that the initial message is correctly enqueued and picked up by the first worker.\n    *   Simulate transient failures at different stages (e.g., by temporarily disabling an external API or introducing a controlled error) and verify that the retry mechanism functions as expected.\n    *   Simulate persistent failures to ensure tasks are moved to the Dead-Letter Queue and the Google Sheet status is updated to 'Failed'.\n    *   Execute a full end-to-end video creation workflow, from Google Sheet approval to YouTube upload, verifying that all stages execute asynchronously and the final video is produced correctly.\n    *   Monitor queue lengths and worker resource utilization during high-load scenarios to assess scalability.\n    *   Verify that the Google Sheet status is accurately updated at each significant transition point (e.g., 'In Progress - Scripting', 'In Progress - Assembling', 'Complete', 'Failed').",
+        "status": "pending",
+        "dependencies": [
+          1,
+          3,
+          4,
+          7,
+          8,
+          9,
+          10
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Create Command-Line Interface for Theme-Based Video Generation",
+        "description": "Develop a user-friendly command-line interface (CLI) to trigger the theme-based viral video generation process for specified themes and quantities, abstracting the underlying orchestration.",
+        "details": "Implement a Python script (e.g., `create_viral_videos.py`) utilizing `argparse` to handle command-line arguments. The CLI must accept two positional arguments: `theme` (e.g., 'family', 'self-help', 'news', 'reddit') and `quantity` (an integer representing the number of videos to generate).\n\n1.  **Argument Parsing and Validation**: Parse `theme` and `quantity` arguments. Validate that `theme` is one of the supported values and `quantity` is a positive integer.\n2.  **Integration with Theme Engine**: For each video requested (up to `quantity`), invoke the `ViralContentThemeEngine` (from Task 11) to generate a unique content idea based on the specified `theme`.\n3.  **Integration with Queue System**: Submit each generated content idea as a new video creation request to the queue-based video processing system (from Task 12). This will involve enqueuing a message or calling an API endpoint exposed by the queue system.\n4.  **User Feedback**: Provide clear command-line output to the user, indicating the progress and confirmation of video generation requests being initiated.",
+        "testStrategy": "1.  **Valid Input Test**: Execute `python create_viral_videos.py family 2`. Verify that two distinct video generation requests are successfully enqueued in the message queue (as per Task 12's implementation) and that the theme engine (Task 11) was invoked for each.\n2.  **Invalid Input Test**: Run the CLI with invalid arguments such as `python create_viral_videos.py unknown_theme 1`, `python create_viral_videos.py family 0`, or `python create_viral_videos.py family non_numeric`. Assert that appropriate error messages are displayed and no video generation processes are initiated.\n3.  **Edge Case Test**: Execute `python create_viral_videos.py reddit 1`. Confirm that a single request is correctly processed.\n4.  **End-to-End Trigger Verification**: For a single request (e.g., `python create_viral_videos.py self-help 1`), monitor the message queue and confirm that the entire video generation pipeline (as orchestrated by Task 12) is initiated for that specific request.",
+        "status": "pending",
+        "dependencies": [
+          1,
+          11,
+          12
+        ],
+        "priority": "high",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-08-29T16:18:13.967Z",
-      "updated": "2025-08-29T21:24:00.022Z",
+      "updated": "2025-08-30T16:47:04.942Z",
       "description": "Tasks for master context"
     }
   }

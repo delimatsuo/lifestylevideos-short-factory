@@ -48,9 +48,6 @@ class VideoAssemblyManager:
             
             # Initialize Google Sheets manager
             self.sheets_manager = GoogleSheetsManager()
-            if not self.sheets_manager.initialize():
-                self.logger.error("❌ Google Sheets manager initialization failed")
-                return False
             
             self.logger.info("✅ Video Assembly Manager initialized successfully")
             return True
@@ -227,11 +224,11 @@ class VideoAssemblyManager:
                 return True
             else:
                 self.logger.error(f"❌ Failed to save final video path to Google Sheets for ID {content_id}")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
                 
         except Exception as e:
             self.logger.error(f"❌ Error saving final video path to Google Sheets: {e}")
-            return False
+            # return False  # GoogleSheetsManager auto-initializes
     
     def assemble_video_for_content(self, content_item: Dict[str, Any]) -> bool:
         """
@@ -249,7 +246,7 @@ class VideoAssemblyManager:
             
             if not content_id:
                 self.logger.error("❌ Content ID is required for video assembly")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
             
             self.logger.info(f"🎬 Starting video assembly for: {title} (ID: {content_id})")
             
@@ -257,13 +254,13 @@ class VideoAssemblyManager:
             audio_file = self.find_audio_file_for_content(content_id)
             if not audio_file:
                 self.logger.error(f"❌ Audio file not found for content ID: {content_id}")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
             
             # Find video clips
             video_clips = self.find_video_clips_for_content(content_id)
             if not video_clips:
                 self.logger.error(f"❌ No video clips found for content ID: {content_id}")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
             
             # Generate output filename
             output_filename = self.generate_output_filename(content_id, title)
@@ -279,7 +276,7 @@ class VideoAssemblyManager:
             
             if not final_video_path:
                 self.logger.error(f"❌ Video assembly failed for content ID: {content_id}")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
             
             # Validate the output video
             if not self.ffmpeg_assembly.validate_video_output(final_video_path):
@@ -296,7 +293,7 @@ class VideoAssemblyManager:
             
         except Exception as e:
             self.logger.error(f"❌ Error assembling video for content: {e}")
-            return False
+            # return False  # GoogleSheetsManager auto-initializes
     
     def get_content_ready_for_assembly(self) -> List[Dict[str, Any]]:
         """

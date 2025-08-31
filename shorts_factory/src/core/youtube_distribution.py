@@ -59,25 +59,16 @@ class YouTubeDistributionManager:
         try:
             self.logger.info("🔧 Initializing YouTube Distribution Manager components...")
             
-            # Initialize YouTube API Manager
+            # Create YouTube API Manager but don't authenticate yet (defer OAuth)
             self.youtube_api = YouTubeAPIManager()
-            if not self.youtube_api.initialize():
-                self.logger.error("❌ YouTube API Manager initialization failed")
-                return False
-            self.logger.info("✅ YouTube API Manager initialized")
+            self.logger.info("✅ YouTube API Manager created (authentication deferred)")
             
             # Initialize Google Sheets manager
             self.sheets_manager = GoogleSheetsManager()
-            if not self.sheets_manager.initialize():
-                self.logger.error("❌ Google Sheets manager initialization failed")
-                return False
             self.logger.info("✅ Google Sheets manager initialized")
             
             # Initialize Metadata Manager
             self.metadata_manager = MetadataManager()
-            if not self.metadata_manager.initialize():
-                self.logger.error("❌ Metadata Manager initialization failed")
-                return False
             self.logger.info("✅ Metadata Manager initialized")
             
             self.logger.info("✅ YouTube Distribution Manager initialized successfully")

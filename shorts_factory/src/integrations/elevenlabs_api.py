@@ -29,7 +29,8 @@ class ElevenLabsTextToSpeech:
             "stability": 0.75,      # Balance between stability and variability
             "similarity_boost": 0.75,  # How similar to the original voice
             "style": 0.20,          # Style exaggeration (subtle)
-            "use_speaker_boost": True  # Enhance speaker clarity
+            "use_speaker_boost": True,  # Enhance speaker clarity
+            "speaking_rate": 1.1    # 10% faster speech for better engagement
         }
         
         # Audio settings
@@ -128,6 +129,49 @@ class ElevenLabsTextToSpeech:
             self.logger.error(f"❌ ElevenLabs API connection test failed: {e}")
             return False
     
+    def preprocess_text_for_tts(self, text: str) -> str:
+        """
+        Preprocess text for natural TTS narration
+        
+        Args:
+            text: Raw script text
+            
+        Returns:
+            Processed text optimized for natural speech
+        """
+        import re
+        
+        # Remove extra whitespace
+        processed = ' '.join(text.split())
+        
+        # Fix common punctuation issues that cause weird pauses
+        processed = re.sub(r'\s*\*\s*', ' ', processed)  # Remove asterisks
+        processed = re.sub(r'\s*-\s*', ' - ', processed)  # Normalize dashes
+        processed = re.sub(r'\s*&\s*', ' and ', processed)  # Replace & with 'and'
+        processed = re.sub(r'\s*\+\s*', ' plus ', processed)  # Replace + with 'plus'
+        
+        # Fix sentence endings for natural flow
+        processed = re.sub(r'[.]{2,}', '.', processed)  # Multiple periods to single
+        processed = re.sub(r'[!]{2,}', '!', processed)  # Multiple exclamations to single
+        processed = re.sub(r'[?]{2,}', '?', processed)  # Multiple questions to single
+        
+        # Ensure proper spacing after punctuation
+        processed = re.sub(r'([.!?])\s*', r'\1 ', processed)
+        processed = re.sub(r'([,:;])\s*', r'\1 ', processed)
+        
+        # Remove parenthetical content that might cause pauses
+        processed = re.sub(r'\([^)]*\)', '', processed)
+        processed = re.sub(r'\[[^\]]*\]', '', processed)
+        
+        # Clean up multiple spaces
+        processed = re.sub(r'\s{2,}', ' ', processed)
+        
+        # Remove leading/trailing whitespace
+        processed = processed.strip()
+        
+        self.logger.debug(f"🎙️ Preprocessed text: {processed[:100]}...")
+        return processed
+    
     def generate_audio_from_text(
         self, 
         text: str, 
@@ -150,9 +194,16 @@ class ElevenLabsTextToSpeech:
                 self.logger.error("❌ No text provided for audio generation")
                 return None
             
+            # FIXED: Preprocess text for natural narration
+            processed_text = self.preprocess_text_for_tts(text)
+            
+            if not processed_text:
+                self.logger.error("❌ Text preprocessing resulted in empty text")
+                return None
+            
             voice_id = voice_id or self.default_voice_id
             
-            self.logger.info(f"🎙️ Generating audio from text ({len(text)} chars)...")
+            self.logger.info(f"🎙️ Generating audio from text ({len(processed_text)} chars processed, {len(text)} chars original)...")
             self.logger.info(f"🎤 Using voice ID: {voice_id}")
             
             # Prepare API request
@@ -165,7 +216,7 @@ class ElevenLabsTextToSpeech:
             }
             
             data = {
-                "text": text,
+                "text": processed_text,  # FIXED: Use preprocessed text
                 "model_id": self.model_id,
                 "voice_settings": self.voice_settings,
                 "output_format": self.output_format

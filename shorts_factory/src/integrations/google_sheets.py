@@ -296,6 +296,10 @@ class GoogleSheetsManager:
                 return False
             
             # Find the column for the field
+            # DEBUG: Log the actual field_name received
+            self.logger.error(f"🚨 SHEETS DEBUG: update_content_field called with field_name='{field_name}', content_id='{content_id}'")
+            self.logger.error(f"🚨 SHEETS DEBUG: Available COLUMNS: {list(self.COLUMNS.keys())}")
+            
             if field_name not in self.COLUMNS:
                 self.logger.error(f"Unknown field name: {field_name}")
                 return False

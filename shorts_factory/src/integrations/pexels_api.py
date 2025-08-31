@@ -385,7 +385,8 @@ class PexelsVideoSourcing:
             
             for quality in quality_preference:
                 for file_data in candidates:
-                    if quality in file_data.get('quality', '').lower():
+                    file_quality = file_data.get('quality', '') or ''  # Handle None values
+                    if quality in file_quality.lower():
                         return file_data
             
             # If no quality match, return first available

@@ -20,12 +20,12 @@ class SRTCaptionGenerator:
         """Initialize SRT caption generator"""
         self.logger = logging.getLogger(__name__)
         
-        # Caption settings
-        self.max_chars_per_line = 40  # Maximum characters per caption line
+        # Caption settings - FIXED for better mobile readability and sync
+        self.max_chars_per_line = 35  # FIXED: Shorter lines for mobile (was 40)
         self.max_lines_per_caption = 2  # Maximum lines per caption
-        self.min_caption_duration = 1.0  # Minimum duration per caption in seconds
-        self.max_caption_duration = 4.0  # Maximum duration per caption in seconds
-        self.caption_padding = 0.1  # Padding between captions in seconds
+        self.min_caption_duration = 0.8  # FIXED: Shorter minimum (was 1.0) for better sync
+        self.max_caption_duration = 3.5  # FIXED: Shorter maximum (was 4.0) for better pacing
+        self.caption_padding = 0.05  # FIXED: Less padding (was 0.1) for tighter sync
         
         # Working directory
         self.captions_dir = Path(config.working_directory) / "captions"
@@ -169,9 +169,17 @@ class SRTCaptionGenerator:
             current_time = 0.0
             
             for i, segment in enumerate(segments):
-                # Calculate duration based on text length proportion
+                # Calculate duration based on text length AND estimated reading speed
+                # Estimate reading time: ~150 words per minute for comfortable reading
+                words_in_segment = len(segment.split())
+                estimated_reading_time = (words_in_segment / 150) * 60  # Convert to seconds
+                
+                # Use combination of text proportion and reading time
                 char_ratio = len(segment) / total_chars if total_chars > 0 else 1.0 / len(segments)
-                base_duration = available_time * char_ratio
+                proportion_time = available_time * char_ratio
+                
+                # Take the longer of the two for better readability
+                base_duration = max(estimated_reading_time, proportion_time)
                 
                 # Apply min/max constraints
                 duration = max(self.min_caption_duration, 

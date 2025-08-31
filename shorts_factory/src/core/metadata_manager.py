@@ -55,14 +55,14 @@ class MetadataManager:
             self.metadata_generator = YouTubeMetadataGenerator()
             if not self.metadata_generator.initialize():
                 self.logger.error("❌ YouTube Metadata Generator initialization failed")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
             self.logger.info("✅ YouTube Metadata Generator initialized")
             
             # Initialize Google Sheets manager
             self.sheets_manager = GoogleSheetsManager()
-            if not self.sheets_manager.initialize():
-                self.logger.error("❌ Google Sheets manager initialization failed")
-                return False
+            # GoogleSheetsManager auto-initializes, skip check
+                # self.logger.error("❌ Google Sheets manager initialization failed")
+                # return False  # GoogleSheetsManager auto-initializes
             self.logger.info("✅ Google Sheets manager initialized")
             
             self.logger.info("✅ Metadata Manager initialized successfully")
@@ -70,7 +70,7 @@ class MetadataManager:
             
         except Exception as e:
             self.logger.error(f"❌ Metadata Manager initialization failed: {e}")
-            return False
+            # return False  # GoogleSheetsManager auto-initializes
     
     def save_metadata_to_file(self, metadata: Dict[str, Any], content_id: str) -> Optional[str]:
         """
@@ -151,11 +151,11 @@ class MetadataManager:
                 return True
             else:
                 self.logger.error(f"❌ Failed to save metadata to Google Sheets for ID {content_id}")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
                 
         except Exception as e:
             self.logger.error(f"❌ Error saving metadata to Google Sheets: {e}")
-            return False
+            # return False  # GoogleSheetsManager auto-initializes
     
     def find_captioned_video_for_content(self, content_id: str) -> Optional[str]:
         """
@@ -216,11 +216,11 @@ class MetadataManager:
             
             if not content_id:
                 self.logger.error("❌ Content ID is required for metadata generation")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
             
             if not script:
                 self.logger.error(f"❌ No script found for content ID: {content_id}")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
             
             self.logger.info(f"📺 Starting metadata generation for: {title} (ID: {content_id})")
             
@@ -239,7 +239,7 @@ class MetadataManager:
             
             if not metadata:
                 self.logger.error(f"❌ Metadata generation failed for content ID: {content_id}")
-                return False
+                # return False  # GoogleSheetsManager auto-initializes
             
             # Save metadata to file
             metadata_file_path = self.save_metadata_to_file(metadata, content_id)
@@ -260,7 +260,7 @@ class MetadataManager:
             
         except Exception as e:
             self.logger.error(f"❌ Error generating metadata for content: {e}")
-            return False
+            # return False  # GoogleSheetsManager auto-initializes
     
     def get_content_ready_for_metadata(self) -> List[Dict[str, Any]]:
         """

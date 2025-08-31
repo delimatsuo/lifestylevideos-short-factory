@@ -1,15 +1,16 @@
 """
 Core functionality for Shorts Factory
-"""
+
+IMPORTANT: Imports removed to prevent circular import issues.
+Import classes directly from their modules instead:
 
 from core.config import config
 from core.approval_workflow import ApprovalWorkflowMonitor
 from core.script_generator import ScriptGenerator
-from core.audio_generator import AudioGenerator
-from core.video_sourcing import VideoSourcingManager
-from core.video_assembly import VideoAssemblyManager
-from core.caption_manager import CaptionManager
-from core.metadata_manager import MetadataManager
-from core.youtube_distribution import YouTubeDistributionManager
+# etc...
+"""
 
-__all__ = ['config', 'ApprovalWorkflowMonitor', 'ScriptGenerator', 'AudioGenerator', 'VideoSourcingManager', 'VideoAssemblyManager', 'CaptionManager', 'MetadataManager', 'YouTubeDistributionManager']
+# No imports here to prevent circular dependencies
+# Import classes directly from their modules when needed
+
+__all__ = []

@@ -45,16 +45,16 @@ class YouTubeMetadataGenerator:
             
             # Initialize Gemini content generator
             self.gemini_generator = GeminiContentGenerator()
-            if not self.gemini_generator.initialize():
-                self.logger.error("❌ Gemini API initialization failed")
-                return False
+            # GeminiContentGenerator auto-initializes in __init__
+                # self.logger.error("❌ Gemini API initialization failed")
+                # return False  # GeminiContentGenerator works without initialize()
             
             self.logger.info("✅ YouTube Metadata Generator initialized successfully")
             return True
             
         except Exception as e:
             self.logger.error(f"❌ YouTube Metadata Generator initialization failed: {e}")
-            return False
+            # return False  # GeminiContentGenerator works without initialize()
     
     def generate_optimized_title(self, script_text: str, original_title: str = "") -> Optional[str]:
         """

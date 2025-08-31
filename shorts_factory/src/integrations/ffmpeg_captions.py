@@ -23,17 +23,17 @@ class FFmpegCaptionBurner:
         
         # Caption styling for mobile/vertical videos (optimized for YouTube Shorts)
         self.font_family = "Arial"  # Widely available font
-        self.font_size = 28  # Good size for 1080x1920 videos
+        self.font_size = 12  # FIXED: Much smaller for mobile (was 18, now 12)
         self.font_color = "white"
         self.outline_color = "black"
-        self.outline_width = 2
+        self.outline_width = 1.0  # FIXED: Thinner outline (was 1.5)
         self.shadow_offset = "1:1"
-        self.shadow_color = "black@0.5"
+        self.shadow_color = "black@0.8"  # FIXED: Stronger shadow for readability
         
-        # Caption positioning (optimized for vertical videos)
-        self.caption_position_y = "h-th-60"  # 60 pixels from bottom
+        # Caption positioning (optimized for vertical videos with YouTube UI space)
+        self.caption_position_y = "h-th-200"  # FIXED: 200 pixels from bottom (avoids YouTube UI)
         self.caption_position_x = "(w-tw)/2"  # Centered horizontally
-        self.max_width = "w*0.9"  # 90% of video width
+        self.max_width = "w*0.85"  # FIXED: 85% of video width (better margins for readability)
         
         # Video quality settings (maintain high quality during caption burn)
         self.video_codec = "libx264"

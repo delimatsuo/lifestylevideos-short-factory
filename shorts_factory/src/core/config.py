@@ -51,6 +51,13 @@ class Config:
             raise ValueError("No valid Google API key found. Set either GOOGLE_GEMINI_API_KEY or GOOGLE_API_KEY")
     
     @property
+    def openai_api_key(self) -> str:
+        key = os.getenv('OPENAI_API_KEY')
+        if not key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
+        return key
+    
+    @property
     def elevenlabs_api_key(self) -> str:
         return self._get_required_env('ELEVENLABS_API_KEY')
     
@@ -116,7 +123,6 @@ class Config:
             'GOOGLE_SHEETS_SPREADSHEET_ID', 
             'GOOGLE_CREDENTIALS_FILE',
             'GOOGLE_GEMINI_API_KEY',
-            'ELEVENLABS_API_KEY',
             'REDDIT_CLIENT_ID',
             'REDDIT_CLIENT_SECRET',
             'PEXELS_API_KEY',
@@ -124,9 +130,17 @@ class Config:
             'YOUTUBE_CLIENT_SECRETS_FILE'
         ]
         
+        # Either OpenAI or ElevenLabs TTS required (OpenAI preferred)
+        tts_vars = ['OPENAI_API_KEY', 'ELEVENLABS_API_KEY']
+        
         for var in required_vars:
             if not os.getenv(var):
                 errors.append(f"Missing required environment variable: {var}")
+        
+        # Check for at least one TTS service
+        tts_available = any(os.getenv(var) for var in tts_vars)
+        if not tts_available:
+            errors.append(f"At least one TTS service required: {' or '.join(tts_vars)}")
         
         # Validate file paths
         credentials_file = os.getenv('GOOGLE_CREDENTIALS_FILE')
