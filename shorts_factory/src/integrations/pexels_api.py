@@ -13,7 +13,7 @@ import os
 import re
 from urllib.parse import urlparse
 
-from core.config import config
+from security.secure_config import config
 
 
 class PexelsVideoSourcing:

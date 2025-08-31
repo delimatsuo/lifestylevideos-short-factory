@@ -125,34 +125,79 @@ class VoskCaptionGenerator:
             
             SetLogLevel(0)  # Reduce VOSK logging
             
-            # Open WAV file
-            wf = wave.open(audio_path, "rb")
-            if (wf.getnchannels() != 1 or 
-                wf.getsampwidth() != 2 or 
-                wf.getcomptype() != "NONE"):
-                raise ValueError("Audio must be WAV format mono PCM")
+            # Use secure resource management for wave file
+            import sys
+            from pathlib import Path
             
-            # Initialize VOSK
-            model = Model(self.model_path)
-            rec = KaldiRecognizer(model, wf.getframerate())
-            rec.SetWords(True)  # 🔥 THIS GIVES WORD-LEVEL TIMING!
+            # Add src to path to import security module
+            sys.path.insert(0, str(Path(__file__).parent.parent))
             
-            results = []
-            while True:
-                data = wf.readframes(4000)
-                if len(data) == 0:
-                    break
-                if rec.AcceptWaveform(data):
-                    part_result = json.loads(rec.Result())
-                    if 'result' in part_result:
-                        results.extend(part_result['result'])
-            
-            # Get final result
-            final_result = json.loads(rec.FinalResult())
-            if 'result' in final_result:
-                results.extend(final_result['result'])
-            
-            wf.close()
+            try:
+                from security.robust_resource_manager import safe_wave_open
+                
+                with safe_wave_open(audio_path, "rb") as wf:
+                    if (wf.getnchannels() != 1 or 
+                        wf.getsampwidth() != 2 or 
+                        wf.getcomptype() != "NONE"):
+                        raise ValueError("Audio must be WAV format mono PCM")
+                    
+                    # Initialize VOSK
+                    model = Model(self.model_path)
+                    rec = KaldiRecognizer(model, wf.getframerate())
+                    rec.SetWords(True)  # 🔥 THIS GIVES WORD-LEVEL TIMING!
+                    
+                    results = []
+                    while True:
+                        data = wf.readframes(4000)
+                        if len(data) == 0:
+                            break
+                        if rec.AcceptWaveform(data):
+                            part_result = json.loads(rec.Result())
+                            if 'result' in part_result:
+                                results.extend(part_result['result'])
+                    
+                    # Get final result
+                    final_result = json.loads(rec.FinalResult())
+                    if 'result' in final_result:
+                        results.extend(final_result['result'])
+                        
+            except ImportError:
+                # Fallback to explicit resource management
+                wf = None
+                try:
+                    wf = wave.open(audio_path, "rb")
+                    if (wf.getnchannels() != 1 or 
+                        wf.getsampwidth() != 2 or 
+                        wf.getcomptype() != "NONE"):
+                        raise ValueError("Audio must be WAV format mono PCM")
+                    
+                    # Initialize VOSK
+                    model = Model(self.model_path)
+                    rec = KaldiRecognizer(model, wf.getframerate())
+                    rec.SetWords(True)  # 🔥 THIS GIVES WORD-LEVEL TIMING!
+                    
+                    results = []
+                    while True:
+                        data = wf.readframes(4000)
+                        if len(data) == 0:
+                            break
+                        if rec.AcceptWaveform(data):
+                            part_result = json.loads(rec.Result())
+                            if 'result' in part_result:
+                                results.extend(part_result['result'])
+                    
+                    # Get final result
+                    final_result = json.loads(rec.FinalResult())
+                    if 'result' in final_result:
+                        results.extend(final_result['result'])
+                        
+                finally:
+                    if wf:
+                        try:
+                            wf.close()
+                            self.logger.debug("🔒 Closed wave file safely")
+                        except Exception as e:
+                            self.logger.warning(f"⚠️ Failed to close wave file: {e}")
             
             self.logger.info(f"🎯 VOSK transcribed {len(results)} words with exact timing!")
             

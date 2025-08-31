@@ -9,7 +9,7 @@ from typing import List, Dict, Optional
 import google.generativeai as genai
 from datetime import datetime
 
-from core.config import config
+from security.secure_config import config
 
 
 class GeminiContentGenerator:

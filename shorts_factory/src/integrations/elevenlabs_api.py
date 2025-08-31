@@ -11,7 +11,7 @@ import json
 from datetime import datetime
 import os
 
-from core.config import config
+from security.secure_config import config
 
 
 class ElevenLabsTextToSpeech:

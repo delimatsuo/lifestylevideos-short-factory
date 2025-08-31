@@ -15,7 +15,7 @@ from google.oauth2.credentials import Credentials as UserCredentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-from core.config import config
+from security.secure_config import config
 
 
 class GoogleSheetsManager:
@@ -296,10 +296,6 @@ class GoogleSheetsManager:
                 return False
             
             # Find the column for the field
-            # DEBUG: Log the actual field_name received
-            self.logger.error(f"🚨 SHEETS DEBUG: update_content_field called with field_name='{field_name}', content_id='{content_id}'")
-            self.logger.error(f"🚨 SHEETS DEBUG: Available COLUMNS: {list(self.COLUMNS.keys())}")
-            
             if field_name not in self.COLUMNS:
                 self.logger.error(f"Unknown field name: {field_name}")
                 return False

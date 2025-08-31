@@ -123,11 +123,46 @@ class ProfessionalKaraokeGenerator:
             self.logger.error("❌ VOSK model not initialized")
             return []
         
+        # Use secure resource management for wave file
+        import sys
+        from pathlib import Path
+        
+        # Add src to path to import security module  
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        
         try:
-            wf = wave.open(audio_path, "rb")
-            if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getcomptype() != "NONE":
-                self.logger.error("❌ Audio file must be WAV format mono PCM")
-                return []
+            from security.robust_resource_manager import safe_wave_open
+            
+            with safe_wave_open(audio_path, "rb") as wf:
+                if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getcomptype() != "NONE":
+                    self.logger.error("❌ Audio file must be WAV format mono PCM")
+                    return []
+                    
+                # Process audio with automatic wave file cleanup
+                return self._process_audio_with_vosk(wf, script)
+                
+        except ImportError:
+            # Fallback to explicit resource management
+            wf = None
+            try:
+                wf = wave.open(audio_path, "rb")
+                if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getcomptype() != "NONE":
+                    self.logger.error("❌ Audio file must be WAV format mono PCM")
+                    return []
+                    
+                return self._process_audio_with_vosk(wf, script)
+                
+            finally:
+                if wf:
+                    try:
+                        wf.close()
+                        self.logger.debug("🔒 Closed wave file safely")
+                    except Exception as e:
+                        self.logger.warning(f"⚠️ Failed to close wave file: {e}")
+        
+    def _process_audio_with_vosk(self, wf, script: str) -> List[dict]:
+        """Process audio file with VOSK for word-level timestamps"""
+        try:
             
             rec = KaldiRecognizer(self.model, wf.getframerate())
             rec.SetWords(True)  # Enable word-level timing

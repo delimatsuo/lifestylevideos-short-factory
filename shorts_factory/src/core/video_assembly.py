@@ -11,7 +11,7 @@ import re
 
 from integrations.ffmpeg_video import FFmpegVideoAssembly
 from integrations.google_sheets import GoogleSheetsManager
-from core.config import config
+from security.secure_config import config
 
 
 class VideoAssemblyManager:

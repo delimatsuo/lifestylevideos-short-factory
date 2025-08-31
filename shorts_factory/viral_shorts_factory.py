@@ -9,6 +9,7 @@ import sys
 import asyncio
 import logging
 import argparse
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
@@ -432,7 +433,10 @@ class ViralShortsFactory:
         self.prompt_engine = ViralPromptEngine()
         self.content_queue = ContentQueue()
         self.api_pool = APIConnectionPool()
-        self.working_dir = Path(os.getenv('WORKING_DIRECTORY', '/Volumes/Extreme Pro/ShortsFactory'))
+        
+        # Use secure configuration for working directory 
+        from src.security.secure_config import config
+        self.working_dir = config.working_directory
         
         # Initialize professional audio generator with exact timing
         from core.professional_audio_generator import ProfessionalAudioGenerator
@@ -448,20 +452,30 @@ class ViralShortsFactory:
         }
     
     def _setup_logging(self):
-        """Setup comprehensive logging"""
-        log_file = f'/tmp/viral_shorts_factory_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
+        """Setup comprehensive logging with secure path validation"""
+        from src.security.secure_path_validator import get_secure_path_validator
+        
+        # Create secure log file path
+        log_filename = f'viral_shorts_factory_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
+        validator = get_secure_path_validator()
+        secure_log_path = validator.get_secure_temp_path(log_filename)
+        
+        if not secure_log_path:
+            # Fallback to basic temp path if validation fails
+            import tempfile
+            secure_log_path = Path(tempfile.gettempdir()) / log_filename
         
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s | %(name)s | %(levelname)s | %(message)s',
             handlers=[
                 logging.StreamHandler(sys.stdout),
-                logging.FileHandler(log_file)
+                logging.FileHandler(secure_log_path)
             ]
         )
         
         logger = logging.getLogger(__name__)
-        logger.info(f"📝 Logging initialized: {log_file}")
+        logger.info(f"📝 Secure logging initialized: {secure_log_path}")
         return logger
     
     async def create_viral_batch(self, theme: ContentTheme, count: int = 5) -> Dict[str, Any]:
@@ -811,27 +825,80 @@ class ViralShortsFactory:
                 if not karaoke_generator.initialize():
                     raise Exception("❌ CRITICAL: Professional Karaoke Generator initialization failed even after model download")
             
-            # Find the assembled video file to add captions to
+            # Find the assembled video file to add captions to with secure path validation
+            from src.security.secure_path_validator import get_secure_path_validator
+            validator = get_secure_path_validator()
+            
             video_path = None
             video_dir = self.working_dir / "final_videos"
             
-            # Look for the assembled video with various patterns
-            for pattern in [f"*{content.id}*.mp4", f"shorts_{content.id}*.mp4", f"content_{content.id}*.mp4"]:
-                matches = list(video_dir.glob(pattern))
-                if matches:
-                    video_path = str(matches[0])  # Use the first match
-                    break
+            # Validate video directory exists and is secure
+            video_dir_result = validator.validate_path(
+                video_dir, 
+                validator.PathCategory.VIDEO_FILES,
+                allow_creation=True
+            )
+            
+            if not video_dir_result.is_valid:
+                raise Exception(f"Insecure video directory: {video_dir_result.violations}")
+                
+            secure_video_dir = video_dir_result.sanitized_path
+            
+            # Sanitize content ID to prevent path injection in glob patterns
+            sanitized_content_id = re.sub(r'[^a-zA-Z0-9_\-]', '_', content.id)
+            
+            # Look for the assembled video with secure patterns
+            for pattern in [f"*{sanitized_content_id}*.mp4", f"shorts_{sanitized_content_id}*.mp4", f"content_{sanitized_content_id}*.mp4"]:
+                try:
+                    matches = list(secure_video_dir.glob(pattern))
+                    for match in matches:
+                        # Validate each match for additional security
+                        match_result = validator.validate_path(
+                            match,
+                            validator.PathCategory.VIDEO_FILES
+                        )
+                        if match_result.is_valid:
+                            video_path = str(match_result.sanitized_path)
+                            break
+                    if video_path:
+                        break
+                except Exception as e:
+                    self.logger.warning(f"⚠️ Error in secure glob pattern {pattern}: {e}")
             
             if not video_path or not Path(video_path).exists():
                 raise Exception(f"Assembled video file not found for content {content.id}")
             
             self.logger.info(f"🎬 Found assembled video: {Path(video_path).name}")
             
-            # Generate output path for PROFESSIONAL karaoke captioned video
+            # Generate secure output path for PROFESSIONAL karaoke captioned video
             video_path_obj = Path(video_path)
-            captioned_videos_dir = self.working_dir / "captioned_videos"
+            
+            # Create secure output directory
+            captioned_videos_dir = validator.create_secure_path(
+                "captioned_videos", 
+                validator.PathCategory.OUTPUT_FILES
+            )
+            
+            if not captioned_videos_dir:
+                raise Exception("Failed to create secure captioned videos directory")
+            
             captioned_videos_dir.mkdir(parents=True, exist_ok=True)
-            captioned_video_path = str(captioned_videos_dir / f"professional_karaoke_{video_path_obj.stem}.mp4")
+            
+            # Create secure output filename
+            safe_filename = f"professional_karaoke_{re.sub(r'[^a-zA-Z0-9_\-]', '_', video_path_obj.stem)}.mp4"
+            captioned_video_path_obj = captioned_videos_dir / safe_filename
+            
+            # Validate output path
+            output_result = validator.validate_path(
+                captioned_video_path_obj,
+                validator.PathCategory.OUTPUT_FILES, 
+                allow_creation=True
+            )
+            
+            if not output_result.is_valid:
+                raise Exception(f"Insecure output path: {output_result.violations}")
+                
+            captioned_video_path = str(output_result.sanitized_path)
             
             # 🎤 THE NEW STANDARD: Professional 2-line karaoke captions!
             self.logger.info("🎭 Using PROFESSIONAL 2-line karaoke approach!")

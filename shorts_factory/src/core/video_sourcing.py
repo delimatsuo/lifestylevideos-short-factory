@@ -10,7 +10,7 @@ from pathlib import Path
 
 from integrations.pexels_api import PexelsVideoSourcing
 from integrations.google_sheets import GoogleSheetsManager
-from core.config import config
+from security.secure_config import config
 
 
 class VideoSourcingManager:
