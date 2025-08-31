@@ -68,7 +68,25 @@ class ProfessionalKaraokeGenerator:
         if not model_path.exists():
             self.logger.info(f"📥 Downloading VOSK model {model_name}...")
             try:
-                zip_path, _ = urllib.request.urlretrieve(model_url)
+                # Use network resilience for VOSK model download  
+                try:
+                    from security.network_resilience import get_network_resilience_manager
+                    resilience_manager = get_network_resilience_manager()
+                    
+                    zip_path = model_path.parent / f"{model_name}.zip"
+                    download_success = resilience_manager.resilient_download(model_url, zip_path)
+                    if not download_success:
+                        raise Exception("Resilient download failed")
+                        
+                except ImportError:
+                    # Fallback with socket timeout
+                    import socket
+                    original_timeout = socket.getdefaulttimeout()
+                    socket.setdefaulttimeout(300.0)  # 5 minutes for model downloads
+                    try:
+                        zip_path, _ = urllib.request.urlretrieve(model_url)
+                    finally:
+                        socket.setdefaulttimeout(original_timeout)
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                     zip_ref.extractall(model_path.parent)
                 os.remove(zip_path)

@@ -65,11 +65,21 @@ class ElevenLabsTextToSpeech:
                 "xi-api-key": self.api_key
             }
             
-            response = requests.get(
-                f"{self.base_url}/voices",
-                headers=headers,
-                timeout=10
-            )
+            # Use network resilience for voice listing
+            try:
+                from security.network_resilience import get_network_resilience_manager
+                resilience_manager = get_network_resilience_manager()
+                
+                with resilience_manager.resilient_request('api_request', 'elevenlabs') as requester:
+                    response = requester.get(f"{self.base_url}/voices", headers=headers)
+                    
+            except ImportError:
+                # Fallback with proper timeout
+                response = requests.get(
+                    f"{self.base_url}/voices",
+                    headers=headers,
+                    timeout=(10.0, 15.0)  # (connect_timeout, read_timeout)
+                )
             
             if response.status_code == 200:
                 voices_data = response.json()
@@ -106,12 +116,21 @@ class ElevenLabsTextToSpeech:
                 "xi-api-key": self.api_key
             }
             
-            # Test with user info endpoint (lightweight)
-            response = requests.get(
-                f"{self.base_url}/user",
-                headers=headers,
-                timeout=10
-            )
+            # Test with user info endpoint using network resilience
+            try:
+                from security.network_resilience import get_network_resilience_manager
+                resilience_manager = get_network_resilience_manager()
+                
+                with resilience_manager.resilient_request('health_check', 'elevenlabs') as requester:
+                    response = requester.get(f"{self.base_url}/user", headers=headers)
+                    
+            except ImportError:
+                # Fallback with health check timeout
+                response = requests.get(
+                    f"{self.base_url}/user",
+                    headers=headers,
+                    timeout=(5.0, 10.0)  # Quick health check timeouts
+                )
             
             if response.status_code == 200:
                 user_info = response.json()
@@ -222,14 +241,27 @@ class ElevenLabsTextToSpeech:
                 "output_format": self.output_format
             }
             
-            # Make API request
+            # Make resilient API request with comprehensive timeout handling
             self.logger.debug(f"📡 Making TTS request to: {url}")
-            response = requests.post(
-                url,
-                json=data,
-                headers=headers,
-                timeout=60  # Longer timeout for audio generation
-            )
+            
+            # Import network resilience system
+            try:
+                from security.network_resilience import get_network_resilience_manager
+                resilience_manager = get_network_resilience_manager()
+                
+                # Use resilient request with AI generation timeouts
+                with resilience_manager.resilient_request('ai_generation', 'elevenlabs') as requester:
+                    response = requester.post(url, json=data, headers=headers)
+                    
+            except ImportError:
+                # Fallback to direct requests with improved timeout
+                self.logger.warning("Network resilience not available, using fallback timeout")
+                response = requests.post(
+                    url,
+                    json=data,
+                    headers=headers,
+                    timeout=(30.0, 120.0)  # (connect_timeout, read_timeout) for audio generation
+                )
             
             if response.status_code == 200:
                 # Generate filename

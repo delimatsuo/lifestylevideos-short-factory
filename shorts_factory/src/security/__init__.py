@@ -11,6 +11,7 @@ from .secure_path_validator import SecurePathValidator, get_secure_path_validato
 from .secure_command_executor import SecureCommandExecutor, get_secure_command_executor
 from .robust_resource_manager import RobustResourceManager, get_resource_manager
 from .atomic_file_operations import AtomicFileOperations, get_atomic_file_operations
+from .network_resilience import NetworkResilienceManager, get_network_resilience_manager
 
 # Make secure config the default config
 config = secure_config
@@ -28,5 +29,7 @@ __all__ = [
     'RobustResourceManager',
     'get_resource_manager',
     'AtomicFileOperations',
-    'get_atomic_file_operations'
+    'get_atomic_file_operations',
+    'NetworkResilienceManager',
+    'get_network_resilience_manager'
 ]

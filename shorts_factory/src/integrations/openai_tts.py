@@ -30,10 +30,24 @@ class OpenAITextToSpeech:
         """Initialize OpenAI TTS client"""
         self.logger = logging.getLogger(__name__)
         try:
-            # Initialize OpenAI client with explicit API key (avoid environment issues)
-            self.client = openai.OpenAI(
-                api_key=config.openai_api_key
-            )
+            # Initialize OpenAI client with network resilience timeouts
+            try:
+                from security.network_resilience import get_timeout_for_operation
+                connect_timeout, read_timeout = get_timeout_for_operation('ai_generation')
+                
+                # OpenAI client with timeout configuration
+                self.client = openai.OpenAI(
+                    api_key=config.openai_api_key,
+                    timeout=connect_timeout + read_timeout,  # Total timeout
+                    max_retries=2  # Built-in retry mechanism
+                )
+            except ImportError:
+                # Fallback with basic timeout
+                self.client = openai.OpenAI(
+                    api_key=config.openai_api_key,
+                    timeout=180.0,  # 3 minutes for AI generation
+                    max_retries=2
+                )
         except Exception as e:
             self.logger.error(f"❌ Failed to initialize OpenAI client: {e}")
             self.client = None

@@ -58,17 +58,34 @@ class PexelsVideoSourcing:
         try:
             self.logger.info("🧪 Testing Pexels API connection...")
             
-            # Test with a simple search query
-            response = requests.get(
-                f"{self.base_url}/search",
-                headers=self.headers,
-                params={
-                    'query': 'nature',
-                    'per_page': 1,
-                    'orientation': self.orientation
-                },
-                timeout=10
-            )
+            # Test with a simple search query using network resilience
+            try:
+                from security.network_resilience import get_network_resilience_manager
+                resilience_manager = get_network_resilience_manager()
+                
+                with resilience_manager.resilient_request('health_check', 'pexels') as requester:
+                    response = requester.get(
+                        f"{self.base_url}/search",
+                        headers=self.headers,
+                        params={
+                            'query': 'nature',
+                            'per_page': 1,
+                            'orientation': self.orientation
+                        }
+                    )
+                    
+            except ImportError:
+                # Fallback with health check timeout
+                response = requests.get(
+                    f"{self.base_url}/search",
+                    headers=self.headers,
+                    params={
+                        'query': 'nature',
+                        'per_page': 1,
+                        'orientation': self.orientation
+                    },
+                    timeout=(5.0, 10.0)  # Health check timeouts
+                )
             
             if response.status_code == 200:
                 data = response.json()
@@ -189,12 +206,22 @@ class PexelsVideoSourcing:
                 'locale': self.locale
             }
             
-            response = requests.get(
-                f"{self.base_url}/search",
-                headers=self.headers,
-                params=params,
-                timeout=15
-            )
+            # Use network resilience for search queries
+            try:
+                from security.network_resilience import get_network_resilience_manager
+                resilience_manager = get_network_resilience_manager()
+                
+                with resilience_manager.resilient_request('search_query', 'pexels') as requester:
+                    response = requester.get(f"{self.base_url}/search", headers=self.headers, params=params)
+                    
+            except ImportError:
+                # Fallback with search query timeout
+                response = requests.get(
+                    f"{self.base_url}/search",
+                    headers=self.headers,
+                    params=params,
+                    timeout=(10.0, 20.0)  # Search query timeouts
+                )
             
             if response.status_code == 200:
                 data = response.json()
@@ -208,12 +235,19 @@ class PexelsVideoSourcing:
                     self.logger.info(f"🔄 No results for '{search_query}', trying fallback: '{fallback_query}'")
                     
                     params['query'] = fallback_query
-                    fallback_response = requests.get(
-                        f"{self.base_url}/search",
-                        headers=self.headers,
-                        params=params,
-                        timeout=15
-                    )
+                    
+                    # Use network resilience for fallback search
+                    try:
+                        with resilience_manager.resilient_request('search_query', 'pexels') as requester:
+                            fallback_response = requester.get(f"{self.base_url}/search", headers=self.headers, params=params)
+                    except (NameError, ImportError):
+                        # Fallback if resilience_manager not available
+                        fallback_response = requests.get(
+                            f"{self.base_url}/search",
+                            headers=self.headers,
+                            params=params,
+                            timeout=(10.0, 20.0)
+                        )
                     
                     if fallback_response.status_code == 200:
                         fallback_data = fallback_response.json()
@@ -253,8 +287,21 @@ class PexelsVideoSourcing:
             
             self.logger.info(f"📥 Downloading video: {filename}")
             
-            # Start download with streaming
-            response = requests.get(video_url, stream=True, timeout=30)
+            # Start download with network resilience
+            try:
+                from security.network_resilience import get_network_resilience_manager
+                resilience_manager = get_network_resilience_manager()
+                
+                with resilience_manager.resilient_request('file_download', 'pexels') as requester:
+                    response = requester.get(video_url, stream=True)
+                    
+            except ImportError:
+                # Fallback with file download timeout
+                response = requests.get(
+                    video_url, 
+                    stream=True, 
+                    timeout=(30.0, 300.0)  # (connect_timeout, read_timeout) for downloads
+                )
             
             if response.status_code != 200:
                 self.logger.error(f"❌ Failed to download video: HTTP {response.status_code}")
