@@ -378,7 +378,14 @@ Write the script only, no stage directions or formatting."""
                     clip_path = pexels.download_video_for_content(content, search_term, clip_index=i)
                     if clip_path:
                         clips.append(clip_path)
-                except:
+                except (ConnectionError, TimeoutError) as e:
+                    print(f"Network error downloading clip {i}: {e}")
+                    continue
+                except (OSError, IOError) as e:
+                    print(f"File error downloading clip {i}: {e}")
+                    continue
+                except Exception as e:
+                    print(f"Unexpected error downloading clip {i}: {e}")
                     continue
             
             return clips if clips else None

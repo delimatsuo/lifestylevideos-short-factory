@@ -219,8 +219,9 @@ try:
             for i in range(5):
                 try:
                     response = requester.get(f'http://test.com/api/{i}')
-                except:
-                    pass
+                except Exception as e:
+                    # Expected in test scenarios
+                    continue
         
         # Get and display statistics
         stats = manager.get_network_stats()

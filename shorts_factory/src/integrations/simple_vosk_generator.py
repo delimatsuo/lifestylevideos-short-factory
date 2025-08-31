@@ -303,13 +303,29 @@ class SimpleVoskGenerator:
                 logger=None
             )
             
-            # Clean up
+            # Clean up with proper exception handling
+            cleanup_errors = []
             try:
                 temp_audio.unlink()
+            except FileNotFoundError:
+                pass  # File already deleted
+            except (OSError, IOError) as e:
+                cleanup_errors.append(f"temp audio cleanup: {e}")
+            except Exception as e:
+                cleanup_errors.append(f"temp audio cleanup unexpected error: {e}")
+            
+            try:
                 video.close()
+            except Exception as e:
+                cleanup_errors.append(f"video close: {e}")
+            
+            try:
                 final_video.close()
-            except:
-                pass
+            except Exception as e:
+                cleanup_errors.append(f"final video close: {e}")
+            
+            if cleanup_errors:
+                self.logger.warning(f"Cleanup errors: {'; '.join(cleanup_errors)}")
             
             self.logger.info(f"✅ SIMPLE CAPTIONS COMPLETE: {Path(output_path).name}")
             

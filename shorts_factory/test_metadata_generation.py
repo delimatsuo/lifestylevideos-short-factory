@@ -346,8 +346,12 @@ class MetadataGenerationTester:
             try:
                 os.unlink(saved_file_path)
                 self.logger.debug("✅ Test file cleaned up")
-            except:
-                pass  # Ignore cleanup errors
+            except FileNotFoundError:
+                pass  # File already deleted
+            except (OSError, IOError) as e:
+                self.logger.warning(f"Failed to cleanup test file: {e}")
+            except Exception as e:
+                self.logger.error(f"Unexpected error during cleanup: {e}")
             
             return True
             

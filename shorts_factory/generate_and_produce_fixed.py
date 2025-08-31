@@ -76,7 +76,11 @@ def generate_and_produce_videos():
         # Sort by ID (descending) to get the newest items first
         try:
             pending_content_sorted = sorted(pending_content, key=lambda x: int(x.get('id', '0')), reverse=True)
-        except:
+        except (ValueError, TypeError) as e:
+            print(f"Warning: Failed to sort content by ID: {e}")
+            pending_content_sorted = pending_content
+        except Exception as e:
+            print(f"Error: Unexpected error sorting content: {e}")
             pending_content_sorted = pending_content
         
         # Take the first 5 (newest) pending items

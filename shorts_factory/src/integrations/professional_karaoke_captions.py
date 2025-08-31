@@ -318,7 +318,11 @@ class ProfessionalKaraokeGenerator:
             self.font_size -= 2
             try:
                 font = ImageFont.truetype(font.path, self.font_size)
-            except:
+            except (OSError, IOError) as e:
+                self.logger.warning(f"Failed to load font with size {self.font_size}: {e}")
+                font = ImageFont.load_default()
+            except Exception as e:
+                self.logger.error(f"Unexpected error loading font: {e}")
                 font = ImageFont.load_default()
             line_bbox = font.getbbox(line_text)
             line_width = line_bbox[2] - line_bbox[0]
@@ -449,13 +453,29 @@ class ProfessionalKaraokeGenerator:
                 logger=None
             )
             
-            # Clean up
+            # Clean up with proper exception handling
+            cleanup_errors = []
             try:
                 temp_audio.unlink()
+            except FileNotFoundError:
+                pass  # File already deleted
+            except (OSError, IOError) as e:
+                cleanup_errors.append(f"temp audio cleanup: {e}")
+            except Exception as e:
+                cleanup_errors.append(f"temp audio cleanup unexpected error: {e}")
+            
+            try:
                 video.close()
+            except Exception as e:
+                cleanup_errors.append(f"video close: {e}")
+            
+            try:
                 final_video.close()
-            except:
-                pass
+            except Exception as e:
+                cleanup_errors.append(f"final video close: {e}")
+            
+            if cleanup_errors:
+                self.logger.warning(f"Cleanup errors: {'; '.join(cleanup_errors)}")
             
             self.logger.info(f"✅ PROFESSIONAL 2-LINE KARAOKE COMPLETE: {Path(output_path).name}")
             self.logger.info(f"🎯 Format: 2 lines × {self.words_per_line} words with gold highlighting")

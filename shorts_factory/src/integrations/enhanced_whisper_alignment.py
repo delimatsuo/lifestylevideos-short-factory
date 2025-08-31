@@ -543,9 +543,19 @@ class EnhancedWhisperAlignment:
     def _check_ffmpeg_available(self) -> bool:
         """Check if FFmpeg is available"""
         try:
-            subprocess.run(["ffmpeg", "-version"], capture_output=True)
+            subprocess.run(["ffmpeg", "-version"], capture_output=True, timeout=5)
             return True
-        except:
+        except FileNotFoundError:
+            self.logger.debug("FFmpeg not found in PATH")
+            return False
+        except subprocess.TimeoutExpired:
+            self.logger.warning("FFmpeg version check timed out")
+            return False
+        except (OSError, subprocess.SubprocessError) as e:
+            self.logger.warning(f"FFmpeg check failed: {e}")
+            return False
+        except Exception as e:
+            self.logger.error(f"Unexpected error checking FFmpeg: {e}")
             return False
     
     def _format_srt_timestamp(self, seconds: float) -> str:

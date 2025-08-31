@@ -141,9 +141,12 @@ class FileLock:
                     if self.lock_file:
                         try:
                             self.lock_file.close()
-                        except:
-                            pass
-                        self.lock_file = None
+                        except (OSError, IOError) as e:
+                            self.logger.warning(f"Failed to close lock file: {e}")
+                        except Exception as e:
+                            self.logger.error(f"Unexpected error closing lock file: {e}")
+                        finally:
+                            self.lock_file = None
                     
                     time.sleep(self.retry_interval)
                     continue
