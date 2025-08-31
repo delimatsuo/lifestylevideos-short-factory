@@ -771,22 +771,44 @@ class ViralShortsFactory:
             if not success:
                 raise Exception("FFmpeg video assembly failed")
             
-            # Find the assembled video file
+            # Find the assembled video file using atomic operations
+            from src.security.atomic_file_operations import get_atomic_file_operations
+            atomic_ops = get_atomic_file_operations()
+            
             final_videos_dir = self.working_dir / "final_videos"
             
-            # Look for the most recently created video file for this content
-            # Try multiple patterns since the assembler uses different naming
-            video_files = (
-                list(final_videos_dir.glob(f"content_{content.id}_*.mp4")) +
-                list(final_videos_dir.glob(f"shorts_{content.id}_*.mp4")) +
-                list(final_videos_dir.glob(f"*{content.id}*.mp4"))
-            )
+            # Atomically ensure the directory exists
+            atomic_ops.atomic_mkdir(final_videos_dir, parents=True, exist_ok=True)
+            
+            # Sanitize content ID to prevent injection attacks
+            sanitized_content_id = re.sub(r'[^a-zA-Z0-9_\-]', '_', content.id)
+            
+            # Look for video files with atomic glob operations to prevent race conditions
+            video_files = []
+            patterns = [f"content_{sanitized_content_id}_*.mp4", f"shorts_{sanitized_content_id}_*.mp4", f"*{sanitized_content_id}*.mp4"]
+            
+            for pattern in patterns:
+                matches = atomic_ops.atomic_glob_with_lock(pattern, final_videos_dir)
+                video_files.extend(matches)
             
             if not video_files:
-                raise Exception("Assembled video file not found")
+                raise Exception(f"No assembled video file found for content {content.id}")
             
-            # Get the most recent file
-            video_path = max(video_files, key=lambda p: p.stat().st_mtime)
+            # Atomically verify files exist and get the most recent one
+            valid_files = []
+            for video_file in video_files:
+                exists, stat_result = atomic_ops.atomic_exists_and_action(
+                    video_file,
+                    lambda p: p.stat() if p.stat().st_size > 0 else None
+                )
+                if exists and stat_result:
+                    valid_files.append((video_file, stat_result.st_mtime))
+            
+            if not valid_files:
+                raise Exception(f"No valid assembled video files found for content {content.id}")
+            
+            # Get the most recent valid file
+            video_path = max(valid_files, key=lambda x: x[1])[0]
             
             self.logger.info(f"✅ Video assembled successfully: {video_path.name}")
             content.advance_stage(ProcessingStage.ASSEMBLY, 'video_path', str(video_path))
@@ -825,14 +847,21 @@ class ViralShortsFactory:
                 if not karaoke_generator.initialize():
                     raise Exception("❌ CRITICAL: Professional Karaoke Generator initialization failed even after model download")
             
-            # Find the assembled video file to add captions to with secure path validation
+            # Find the assembled video file with atomic operations to prevent race conditions
             from src.security.secure_path_validator import get_secure_path_validator
+            from src.security.atomic_file_operations import get_atomic_file_operations
+            
             validator = get_secure_path_validator()
+            atomic_ops = get_atomic_file_operations()
             
             video_path = None
             video_dir = self.working_dir / "final_videos"
             
-            # Validate video directory exists and is secure
+            # Atomically ensure video directory exists
+            if not atomic_ops.atomic_mkdir(video_dir, parents=True, exist_ok=True):
+                raise Exception(f"Failed to create video directory: {video_dir}")
+            
+            # Validate video directory is secure
             video_dir_result = validator.validate_path(
                 video_dir, 
                 validator.PathCategory.VIDEO_FILES,
@@ -847,33 +876,49 @@ class ViralShortsFactory:
             # Sanitize content ID to prevent path injection in glob patterns
             sanitized_content_id = re.sub(r'[^a-zA-Z0-9_\-]', '_', content.id)
             
-            # Look for the assembled video with secure patterns
+            # Atomically search for assembled video with race condition protection
             for pattern in [f"*{sanitized_content_id}*.mp4", f"shorts_{sanitized_content_id}*.mp4", f"content_{sanitized_content_id}*.mp4"]:
                 try:
-                    matches = list(secure_video_dir.glob(pattern))
+                    # Use atomic glob to prevent TOCTOU race conditions
+                    matches = atomic_ops.atomic_glob_with_lock(pattern, secure_video_dir)
+                    
                     for match in matches:
-                        # Validate each match for additional security
-                        match_result = validator.validate_path(
+                        # Atomically verify file exists and validate it
+                        exists, validated_path = atomic_ops.atomic_exists_and_action(
                             match,
-                            validator.PathCategory.VIDEO_FILES
+                            lambda p: validator.validate_path(p, validator.PathCategory.VIDEO_FILES).sanitized_path
+                                     if validator.validate_path(p, validator.PathCategory.VIDEO_FILES).is_valid else None
                         )
-                        if match_result.is_valid:
-                            video_path = str(match_result.sanitized_path)
+                        
+                        if exists and validated_path:
+                            video_path = str(validated_path)
+                            self.logger.info(f"🎬 Found assembled video atomically: {Path(video_path).name}")
                             break
+                    
                     if video_path:
                         break
+                        
                 except Exception as e:
-                    self.logger.warning(f"⚠️ Error in secure glob pattern {pattern}: {e}")
+                    self.logger.warning(f"⚠️ Error in atomic glob pattern {pattern}: {e}")
             
-            if not video_path or not Path(video_path).exists():
-                raise Exception(f"Assembled video file not found for content {content.id}")
+            # Final atomic verification that the video file exists
+            if not video_path:
+                raise Exception(f"No assembled video file found for content {content.id}")
+                
+            video_exists, final_path = atomic_ops.atomic_exists_and_action(
+                video_path,
+                lambda p: p if p.stat().st_size > 0 else None  # Ensure non-empty file
+            )
+            
+            if not video_exists or not final_path:
+                raise Exception(f"Assembled video file not found or empty: {video_path}")
             
             self.logger.info(f"🎬 Found assembled video: {Path(video_path).name}")
             
             # Generate secure output path for PROFESSIONAL karaoke captioned video
             video_path_obj = Path(video_path)
             
-            # Create secure output directory
+            # Create secure output directory with atomic operations
             captioned_videos_dir = validator.create_secure_path(
                 "captioned_videos", 
                 validator.PathCategory.OUTPUT_FILES
@@ -882,7 +927,9 @@ class ViralShortsFactory:
             if not captioned_videos_dir:
                 raise Exception("Failed to create secure captioned videos directory")
             
-            captioned_videos_dir.mkdir(parents=True, exist_ok=True)
+            # Atomically create directory to prevent race conditions
+            if not atomic_ops.atomic_mkdir(captioned_videos_dir, parents=True, exist_ok=True):
+                raise Exception(f"Failed to atomically create captioned videos directory: {captioned_videos_dir}")
             
             # Create secure output filename
             safe_filename = f"professional_karaoke_{re.sub(r'[^a-zA-Z0-9_\-]', '_', video_path_obj.stem)}.mp4"
