@@ -590,9 +590,22 @@ def main():
         logger.error("❌ Failed to initialize Shorts Factory")
         sys.exit(1)
     
-    # Check command line arguments
+    # Check command line arguments with validation
     if len(sys.argv) > 1:
-        command = sys.argv[1].lower()
+        try:
+            from security.input_validator import get_input_validator, DataType
+            validator = get_input_validator()
+            
+            # Validate command argument
+            cmd_result = validator.validate_input(sys.argv[1], DataType.STRING, context="cli_command")
+            if not cmd_result.is_valid:
+                logger.error(f"Invalid command argument: {'; '.join(cmd_result.errors)}")
+                return
+            command = cmd_result.sanitized_value.lower()
+            
+        except ImportError:
+            # Fallback to basic validation
+            command = str(sys.argv[1]).lower()
         
         if command == 'test':
             # Run basic functionality test

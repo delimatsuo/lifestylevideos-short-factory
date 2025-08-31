@@ -348,10 +348,30 @@ def main():
         print("ℹ️  No sensitive credentials found to migrate")
         sys.exit(0)
     
-    # Confirm migration
+    # Confirm migration with validation
     print("⚠️  This will migrate sensitive credentials to encrypted storage.")
-    response = input("Continue? [y/N]: ")
-    if response.lower() != 'y':
+    
+    try:
+        from src.security.input_validator import get_input_validator, DataType
+        validator = get_input_validator()
+        
+        raw_response = input("Continue? [y/N]: ")
+        
+        # Validate user response
+        response_result = validator.validate_input(raw_response, DataType.STRING, context="user_confirmation")
+        if not response_result.is_valid:
+            print("❌ Invalid response")
+            print("Migration cancelled")
+            return
+        
+        response = response_result.sanitized_value.lower()
+        
+    except ImportError:
+        # Fallback to basic validation
+        raw_response = input("Continue? [y/N]: ")
+        response = str(raw_response).lower()
+    
+    if response != 'y':
         print("Migration cancelled")
         sys.exit(0)
     

@@ -13,6 +13,7 @@ from .robust_resource_manager import RobustResourceManager, get_resource_manager
 from .atomic_file_operations import AtomicFileOperations, get_atomic_file_operations
 from .network_resilience import NetworkResilienceManager, get_network_resilience_manager
 from .exception_handler import CentralizedExceptionHandler, get_exception_handler
+from .input_validator import InputValidator, get_input_validator
 
 # Make secure config the default config
 config = secure_config
@@ -34,5 +35,7 @@ __all__ = [
     'NetworkResilienceManager',
     'get_network_resilience_manager',
     'CentralizedExceptionHandler',
-    'get_exception_handler'
+    'get_exception_handler',
+    'InputValidator',
+    'get_input_validator'
 ]

@@ -52,13 +52,48 @@ FEATURES:
 async def main():
     """Main entry point"""
     
-    # Parse command line arguments
-    if len(sys.argv) < 2:
-        print_usage()
-        return
-    
-    theme_arg = sys.argv[1].lower()
-    count = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    # Parse command line arguments with validation
+    try:
+        from src.security.input_validator import get_input_validator, DataType
+        validator = get_input_validator()
+        
+        if len(sys.argv) < 2:
+            print_usage()
+            return
+        
+        # Validate theme argument
+        theme_result = validator.validate_input(sys.argv[1], DataType.STRING, context="cli_theme")
+        if not theme_result.is_valid:
+            print(f"❌ Invalid theme argument: {'; '.join(theme_result.errors)}")
+            print_usage()
+            return
+        theme_arg = theme_result.sanitized_value.lower()
+        
+        # Validate count argument if provided
+        count = 5  # Default
+        if len(sys.argv) > 2:
+            count_result = validator.safe_int(sys.argv[2], default=5, min_val=1, max_val=20)
+            if count_result is None:
+                print(f"❌ Invalid count argument: {sys.argv[2]} (must be 1-20)")
+                print_usage()
+                return
+            count = count_result
+            
+    except ImportError:
+        # Fallback to basic validation if security modules not available
+        if len(sys.argv) < 2:
+            print_usage()
+            return
+        
+        theme_arg = str(sys.argv[1]).lower()
+        try:
+            count = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+            if count < 1 or count > 20:
+                print(f"❌ Count must be between 1 and 20, got: {count}")
+                return
+        except ValueError:
+            print(f"❌ Invalid count argument: {sys.argv[2]}")
+            return
     
     # Validate theme
     valid_themes = ['family', 'selfhelp', 'news', 'reddit', 'mixed']

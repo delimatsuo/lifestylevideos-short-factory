@@ -24,8 +24,28 @@ def setup_spreadsheet():
     print("https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID_HERE/edit")
     print()
     
-    # Get spreadsheet ID from user
-    spreadsheet_id = input("📎 Paste your Spreadsheet ID here: ").strip()
+    # Get spreadsheet ID from user with validation
+    try:
+        from src.security.input_validator import get_input_validator, DataType
+        validator = get_input_validator()
+        
+        raw_input = input("📎 Paste your Spreadsheet ID here: ").strip()
+        
+        # Validate spreadsheet ID
+        id_result = validator.validate_input(raw_input, DataType.STRING, context="spreadsheet_id")
+        if not id_result.is_valid:
+            print(f"❌ Invalid spreadsheet ID: {'; '.join(id_result.errors)}")
+            return
+        
+        spreadsheet_id = id_result.sanitized_value
+        
+    except ImportError:
+        # Fallback to basic validation
+        spreadsheet_id = input("📎 Paste your Spreadsheet ID here: ").strip()
+        # Basic validation
+        if not spreadsheet_id or len(spreadsheet_id) < 10:
+            print("❌ Invalid spreadsheet ID")
+            return
     
     if not spreadsheet_id:
         print("❌ No Spreadsheet ID provided. Please try again.")
